@@ -15,6 +15,8 @@ import { getCategoryById } from './data/categories';
 import { supabase } from './utils/supabaseClient';
 import { fetchAllFromSupabase, migrateToSupabase, syncTransaction, deleteFromSupabase } from './utils/supabaseSync';
 import Login from './components/Login';
+import PinLockScreen from './components/PinLockScreen';
+import { hasLocalPin } from './utils/crypto';
 
 const ACCOUNTS = [
   { id: 'cash',    label: 'Efectivo',   icon: '💵', color: '#34C759' },
@@ -48,6 +50,7 @@ function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLocked, setIsLocked] = useState(hasLocalPin());
   
   // Filtros de fecha granulares
   const [dateFilterType, setDateFilterType] = useState('month'); // 'month' o 'range'
@@ -542,6 +545,10 @@ function AppContent() {
 
   if (!session) {
     return <Login />;
+  }
+
+  if (isLocked) {
+    return <PinLockScreen onUnlock={() => setIsLocked(false)} onLogout={handleSignOut} />;
   }
 
   return (
