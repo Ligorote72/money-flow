@@ -55,34 +55,47 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 animate-in fade-in duration-300">
-      <div className="flex flex-col items-center w-full max-w-md px-6">
+    <div className={`animate-fade ${error ? 'animate-shake' : ''}`} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'var(--bg-color)', zIndex: 100,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: '20px'
+    }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: '300px' }}>
         
         {/* Header */}
-        <div className="mb-10 text-center">
-          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">💰</span>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{
+            width: '64px', height: '64px', backgroundColor: 'rgba(52, 199, 89, 0.15)',
+            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px', fontSize: '28px'
+          }}>
+            🔐
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">MoneyFlow</h1>
-          <p className="text-gray-500 dark:text-gray-400">Ingresa tu PIN para acceder</p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'white', marginBottom: '8px' }}>MoneyFlow</h1>
+          <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Ingresa tu PIN</p>
         </div>
 
         {/* PIN Indicators */}
-        <div className={`flex gap-4 mb-12 ${error ? 'animate-shake' : ''}`}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '50px' }}>
           {[0, 1, 2, 3].map((index) => (
             <div 
               key={index}
-              className={`w-4 h-4 rounded-full transition-all duration-200 ${
-                pin.length > index 
-                  ? 'bg-blue-600 dark:bg-blue-500 scale-110' 
-                  : 'bg-gray-300 dark:bg-gray-700'
-              } ${error ? 'bg-red-500 dark:bg-red-500' : ''}`}
+              style={{
+                width: '14px', height: '14px', borderRadius: '50%',
+                backgroundColor: error ? 'var(--expense)' : (pin.length > index ? 'var(--primary)' : 'rgba(255,255,255,0.15)'),
+                transition: 'all 0.2s ease',
+                transform: pin.length > index ? 'scale(1.2)' : 'scale(1)'
+              }}
             />
           ))}
         </div>
 
         {/* Keypad */}
-        <div className="grid grid-cols-3 gap-6 mb-12 w-full max-w-[280px]">
+        <div style={{ 
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 20px', 
+          width: '100%', maxWidth: '280px', margin: '0 auto' 
+        }}>
           {keys.map((key, index) => {
             if (key === null) return <div key={index} />;
             
@@ -91,7 +104,15 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
                 <button
                   key={index}
                   onClick={handleDelete}
-                  className="flex items-center justify-center h-16 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors active:scale-95"
+                  style={{
+                    backgroundColor: 'transparent', border: 'none', color: 'var(--text-dim)',
+                    height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', borderRadius: '50%', fontSize: '1.2rem',
+                    transition: 'background 0.2s'
+                  }}
+                  onPointerDown={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                  onPointerUp={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onPointerCancel={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <Delete size={28} />
                 </button>
@@ -102,23 +123,35 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
               <button
                 key={index}
                 onClick={() => handleNumberClick(key)}
-                className="flex items-center justify-center h-16 rounded-full text-3xl font-medium text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors active:scale-95 bg-white dark:bg-gray-800/50 shadow-sm border border-gray-100 dark:border-gray-800"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.03)',
+                  color: 'white', height: '65px', borderRadius: '50%', fontSize: '1.7rem', fontWeight: '400',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'background 0.1s', userSelect: 'none'
+                }}
+                onPointerDown={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+                onPointerUp={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                onPointerCancel={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
               >
                 {key}
               </button>
             );
           })}
         </div>
-
-        {/* Footer actions */}
-        <button 
-          onClick={handleForgotPin}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          <LogOut size={16} />
-          <span>Cerrar Sesión</span>
-        </button>
       </div>
+
+      {/* Footer actions */}
+      <button 
+        onClick={handleForgotPin}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '8px', marginTop: 'auto',
+          backgroundColor: 'transparent', border: 'none', color: 'var(--text-dim)',
+          padding: '16px', fontSize: '0.85rem', cursor: 'pointer'
+        }}
+      >
+        <LogOut size={16} />
+        <span>Cerrar Sesión</span>
+      </button>
     </div>
   );
 }
