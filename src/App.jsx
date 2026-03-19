@@ -701,20 +701,22 @@ function AppContent() {
       </header>
 
       {/* Balance Card */}
-      <BalanceCard 
-        totalBalance={balance + totalPiggySavings} 
-        income={totalIncome} 
-        expenses={totalExpenses} 
-        hideBalance={hideBalance}
-        accountBalances={accountBalances}
-        accounts={ACCOUNTS}
-        username={username}
-        totalPiggySavings={totalPiggySavings}
-        banks={banks}
-        onAddBank={addBank}
-        onDeleteBank={deleteBank}
-        onAdjustSavings={adjustSavingsBalance}
-      />
+      {!(activeTab === 'varios' && variosTab === 'minegocio') && (
+        <BalanceCard 
+          totalBalance={balance + totalPiggySavings} 
+          income={totalIncome} 
+          expenses={totalExpenses} 
+          hideBalance={hideBalance}
+          accountBalances={accountBalances}
+          accounts={ACCOUNTS}
+          username={username}
+          totalPiggySavings={totalPiggySavings}
+          banks={banks}
+          onAddBank={addBank}
+          onDeleteBank={deleteBank}
+          onAdjustSavings={adjustSavingsBalance}
+        />
+      )}
       {/* Contenido */}
       <div style={{ flex: 1, paddingBottom: '100px' }}>
         {activeTab === 'home' && (
