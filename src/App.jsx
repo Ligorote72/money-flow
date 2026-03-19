@@ -246,7 +246,7 @@ function AppContent() {
         </div>
       </header>
 
-      {!(activeTab === 'varios' && variosTab === 'minegocio') && (
+      {activeTab === 'home' && (
         <BalanceCard 
           totalBalance={accountBalances.cash + accountBalances.bank + totalPiggySavings} 
           income={totalIncome} expenses={totalExpenses} 

@@ -206,12 +206,13 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
   };
 
   const handlePayWorker = (e, worker) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!payUnits) return;
     
     const units = parseFloat(payUnits);
-    let amount = units * worker.rate;
-    let desc = `Nómina: ${worker.name} (${units} ${worker.type === 'recolector' ? 'Kg' : worker.type === 'recolector_arroba' ? '@' : 'días'})`;
+    const amount = units * (worker.rate || 0);
+    const unitLabel = worker.type === 'recolector' ? 'Kg' : (worker.type === 'recolector_arroba' ? '@' : 'días');
+    const desc = `Pago Trabajador: ${worker.name} (${units} ${unitLabel})`;
       
     handleAddTx(null, desc, 'expense', amount);
     setPayWorkerId(null);
@@ -451,10 +452,27 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
                     </div>
                   </div>
                   {payWorkerId === w.id && (
-                    <form onSubmit={(e) => handlePayWorker(e, w)} style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                      <input type="number" step="0.01" placeholder="Unidades" value={payUnits} onChange={e => setPayUnits(e.target.value)} required style={{ flex: 1 }} />
-                      <button type="submit" className="btn-primary" style={{ padding: '0 16px' }}>OK</button>
-                    </form>
+                    <div className="animate-fade" style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', marginTop: '12px' }}>
+                      <form onSubmit={(e) => handlePayWorker(e, w)} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>
+                            Cant. {w.type === 'recolector' ? 'Kg' : (w.type === 'recolector_arroba' ? '@ Arrobas' : 'Días')}
+                          </label>
+                          <input type="number" step="0.01" placeholder="Ej: 10" value={payUnits} onChange={e => setPayUnits(e.target.value)} required style={{ width: '100%' }} />
+                        </div>
+                        <button type="submit" className="btn-primary" style={{ padding: '0 16px', height: '42px' }}>Pagar</button>
+                      </form>
+                      {payUnits && parseFloat(payUnits) > 0 && (
+                        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                            {payUnits} × {formatCurrency(w.rate)}
+                          </span>
+                          <span style={{ fontWeight: '700', color: 'var(--expense)', fontSize: '1rem' }}>
+                            Total: {formatCurrency(parseFloat(payUnits) * w.rate)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
