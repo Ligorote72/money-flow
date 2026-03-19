@@ -359,19 +359,30 @@ function AppContent() {
     setBanks(prev => [...prev, newBank]);
 
     try {
-      const { data, error } = await supabase
+      // Intentar insertar con user_id
+      let { data, error } = await supabase
         .from('banks')
         .insert({ name, user_id: session.user.id })
         .select();
 
+      // Si falla porque no encuentra 'user_id', intentar sin él (confiando en el default auth.uid() de la DB)
+      if (error && error.message.includes("user_id")) {
+        console.warn('user_id column not found, retrying without it...');
+        const retry = await supabase
+          .from('banks')
+          .insert({ name })
+          .select();
+        data = retry.data;
+        error = retry.error;
+      }
+
       if (error) throw error;
 
       if (data && data[0]) {
-        // Reemplazar ID temporal con el real de la DB
         setBanks(prev => prev.map(b => b.id === tempId ? { id: data[0].id, name: data[0].name } : b));
       }
     } catch (err) {
-      console.error('Error al agregar banco:', err);
+      console.error('Error final al agregar banco:', err);
       alert(`Error al guardar el banco en la nube: ${err.message || 'Error desconocido'}. Se ha mantenido localmente.`);
     }
   };
