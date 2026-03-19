@@ -79,14 +79,32 @@ h1, h2, h3 {
 }
 
 input, select {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 12px;
-  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 14px;
+  color: #ffffff;
   width: 100%;
   font-size: 1rem;
   margin-top: 8px;
+  transition: border-color 0.2s, background-color 0.2s;
+  appearance: none; /* For custom arrow if needed, but keeping it simple for now */
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.9rem;
+}
+
+option {
+  background-color: #1a1a1e; /* matching --surface-color */
+  color: white;
 }
 
 /* Animaciones */
