@@ -111,3 +111,20 @@ export const formatCurrency = (amount) => {
     maximumFractionDigits: 0,
   }).format(amount).replace(/,00$/, '').replace('COP', '').trim();
 };
+
+/**
+ * Formatea un string numérico con puntos de miles para inputs ($ 1.250.000)
+ */
+export const formatInputAmount = (numStr) => {
+  if (!numStr) return '';
+  const clean = numStr.toString().replace(/\D/g, '');
+  if (!clean) return '';
+  return '$ ' + clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+/**
+ * Limpia el formato de moneda para obtener el número puro en string
+ */
+export const parseInputAmount = (formattedValue) => {
+  return formattedValue.replace(/\D/g, '');
+};

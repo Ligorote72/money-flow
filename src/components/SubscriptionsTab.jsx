@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CATEGORIES } from '../data/categories';
-import { formatCurrency } from '../utils/helpers';
+import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
 const SubscriptionsTab = ({ subscriptions, onAddSubscription, onDeleteSubscription, accounts }) => {
   const [name, setName] = useState('');
@@ -55,7 +55,10 @@ const SubscriptionsTab = ({ subscriptions, onAddSubscription, onDeleteSubscripti
                 Monto
                 {amount && <span style={{ color: 'var(--primary)' }}>{formatCurrency(parseFloat(amount))}</span>}
               </label>
-              <input type="number" placeholder="Monto" value={amount} onChange={e => setAmount(e.target.value)} required />
+              <input type="text" inputMode="numeric" placeholder="Monto" 
+                value={formatInputAmount(amount)} 
+                onChange={e => setAmount(parseInputAmount(e.target.value))} 
+                required />
             </div>
 
             <div style={{ marginTop: '12px' }}>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CATEGORIES } from '../data/categories';
-import { formatCurrency } from '../utils/helpers';
+import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
 const GoalBar = ({ label, current, goal, color }) => {
   const percentage = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
@@ -78,11 +78,15 @@ const GoalsSection = ({ income, expenses, goals, onSaveGoals, transactions }) =>
         <div>
           <div style={{ marginBottom: '12px' }}>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Meta de Ingresos (mes)</label>
-            <input type="number" placeholder="ej: 3000000" value={incomeGoal} onChange={e => setIncomeGoal(e.target.value)} />
+            <input type="text" inputMode="numeric" placeholder="ej: $ 3.000.000" 
+              value={formatInputAmount(incomeGoal)} 
+              onChange={e => setIncomeGoal(parseInputAmount(e.target.value))} />
           </div>
           <div style={{ marginBottom: '20px' }}>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Límite de Gastos (mes)</label>
-            <input type="number" placeholder="ej: 1500000" value={expenseGoal} onChange={e => setExpenseGoal(e.target.value)} />
+            <input type="text" inputMode="numeric" placeholder="ej: $ 1.500.000" 
+              value={formatInputAmount(expenseGoal)} 
+              onChange={e => setExpenseGoal(parseInputAmount(e.target.value))} />
           </div>
           <button className="btn-primary" style={{ width: '100%' }} onClick={handleSave}>
             Guardar Metas
@@ -126,11 +130,12 @@ const GoalsSection = ({ income, expenses, goals, onSaveGoals, transactions }) =>
                     <span style={{ fontSize: '1rem', width: '24px' }}>{cat.icon}</span>
                     <span style={{ flex: 1, fontSize: '0.85rem' }}>{cat.label}</span>
                     <input
-                      type="number"
-                      placeholder="0"
-                      value={catBudgets[cat.id] || ''}
-                      onChange={e => setCatBudgets(prev => ({ ...prev, [cat.id]: parseFloat(e.target.value) || 0 }))}
-                      style={{ width: '110px', margin: 0, padding: '8px 10px', fontSize: '0.85rem' }}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="$ 0"
+                      value={formatInputAmount(catBudgets[cat.id] || '')}
+                      onChange={e => setCatBudgets(prev => ({ ...prev, [cat.id]: parseInputAmount(e.target.value) }))}
+                      style={{ width: '130px', margin: 0, padding: '8px 10px', fontSize: '0.85rem' }}
                     />
                   </div>
                 ))}

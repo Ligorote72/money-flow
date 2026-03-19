@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { formatCurrency } from '../utils/helpers';
+import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
 const DEBT_TYPES = [
   { id: 'owe',  label: 'Les debo', color: '#FF3B30' },
@@ -67,11 +67,11 @@ const PaymentPanel = ({ debt, onFullPayment, onPartialPayment, onCancel }) => {
           </p>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               placeholder="Monto abonado"
-              value={partialAmount}
-              max={debt.amount}
-              onChange={e => setPartialAmount(e.target.value)}
+              value={formatInputAmount(partialAmount)}
+              onChange={e => setPartialAmount(parseInputAmount(e.target.value))}
               style={{ flex: 1, margin: 0, padding: '10px 12px', fontSize: '0.9rem' }}
               autoFocus
             />
@@ -184,7 +184,10 @@ const DebtsTab = ({ debts, onAddDebt, onDeleteDebt, onTogglePaid, onPartialPayme
             Monto *
             {amount && <span style={{ color: 'var(--primary)', fontWeight: '600' }}>{formatCurrency(parseFloat(amount))}</span>}
           </label>
-          <input type="number" placeholder="Monto *" value={amount} onChange={e => setAmount(e.target.value)} required />
+          <input type="text" inputMode="numeric" placeholder="Monto *" 
+            value={formatInputAmount(amount)} 
+            onChange={e => setAmount(parseInputAmount(e.target.value))} 
+            required />
           <input type="text" placeholder="Descripción (opcional)" value={description} onChange={e => setDescription(e.target.value)} />
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="button" onClick={() => setShowForm(false)} style={{

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { formatCurrency } from '../utils/helpers';
+import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
 const PiggyBankTab = ({ piggyBanks, onAddPiggy, onAddFunds, onDeletePiggy, availableBalance }) => {
   const [name, setName] = useState('');
@@ -71,7 +71,10 @@ const PiggyBankTab = ({ piggyBanks, onAddPiggy, onAddFunds, onDeletePiggy, avail
                 Meta de ahorro
                 {goal && <span style={{ color: 'var(--primary)' }}>{formatCurrency(parseFloat(goal))}</span>}
               </label>
-              <input type="number" placeholder="¿Cuánto necesitas?" value={goal} onChange={e => setGoal(e.target.value)} required />
+              <input type="text" inputMode="numeric" placeholder="¿Cuánto necesitas?" 
+                value={formatInputAmount(goal)} 
+                onChange={e => setGoal(parseInputAmount(e.target.value))} 
+                required />
             </div>
 
             <div style={{ marginTop: '16px', marginBottom: '20px' }}>
@@ -153,7 +156,8 @@ const PiggyBankTab = ({ piggyBanks, onAddPiggy, onAddFunds, onDeletePiggy, avail
                     </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input 
-                        type="number" value={fundAmount} onChange={e => setFundAmount(e.target.value)} 
+                        type="text" inputMode="numeric" value={formatInputAmount(fundAmount)} 
+                        onChange={e => setFundAmount(parseInputAmount(e.target.value))} 
                         placeholder="Monto" style={{ margin: 0, padding: '8px 12px' }} autoFocus
                       />
                       <button 

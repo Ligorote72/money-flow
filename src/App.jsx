@@ -16,6 +16,9 @@ import { supabase } from './utils/supabaseClient';
 import { fetchAllFromSupabase, migrateToSupabase, syncTransaction, deleteFromSupabase } from './utils/supabaseSync';
 import Login from './components/Login';
 import PinLockScreen from './components/PinLockScreen';
+import LandingPage from './components/LandingPage';
+import BusinessGate from './components/BusinessGate';
+import BusinessDashboard from './components/BusinessDashboard';
 import { hasLocalPin } from './utils/crypto';
 
 const ACCOUNTS = [
@@ -39,7 +42,7 @@ function AppContent() {
   const now = new Date();
 
   const [activeTab, setActiveTab]     = useState('home');
-  const [variosTab, setVariosTab]     = useState('goals'); // goals, subs, ahorro
+  const [variosTab, setVariosTab]     = useState('menu'); // menu, goals, subs, ahorro, debts, minegocio
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear]   = useState(now.getFullYear());
   const [alerts, setAlerts]           = useState([]);
@@ -51,7 +54,63 @@ function AppContent() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLocked, setIsLocked] = useState(hasLocalPin());
+  const [isBusinessUnlocked, setIsBusinessUnlocked] = useState(false);
   
+  // PWA & Landing Page state
+  const [showLanding, setShowLanding] = useState(() => {
+    // Si corre como standalone (PWA instalada), no mostrar landing.
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      return false;
+    }
+    // O si ya decidió saltarla
+    const skipped = localStorage.getItem('money-flow-skip-landing');
+    return !skipped;
+  });
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Si detectamos que se instaló
+    const handleAppInstalled = () => {
+      setShowLanding(false);
+      setDeferredPrompt(null);
+      localStorage.setItem('money-flow-skip-landing', 'true');
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    // Manejo para iOS: no tienen beforeinstallprompt, se les muestra instruccion en pantalla
+    if (/iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent) && !deferredPrompt) {
+        alert('Para instalar en iOS: Pulsa el botón "Compartir" en Safari y luego "Agregar a inicio".');
+        return;
+    }
+
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('Usuario aceptó instalar A2HS');
+      }
+      setDeferredPrompt(null);
+    }
+  };
+
+  const skipLanding = () => {
+    localStorage.setItem('money-flow-skip-landing', 'true');
+    setShowLanding(false);
+  };
+
   // Filtros de fecha granulares
   const [dateFilterType, setDateFilterType] = useState('month'); // 'month' o 'range'
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -88,12 +147,30 @@ function AppContent() {
     return s ? JSON.parse(s) : defaultBanks;
   });
 
+  const [businesses, setBusinesses] = useState(() => {
+    const s = localStorage.getItem('money-flow-businesses');
+    return s ? JSON.parse(s) : [];
+  });
+
+  const [businessTransactions, setBusinessTransactions] = useState(() => {
+    const s = localStorage.getItem('money-flow-business-txs');
+    return s ? JSON.parse(s) : [];
+  });
+
+  const [businessWorkers, setBusinessWorkers] = useState(() => {
+    const s = localStorage.getItem('money-flow-business-workers');
+    return s ? JSON.parse(s) : [];
+  });
+
   useEffect(() => { localStorage.setItem('money-flow-txs',   JSON.stringify(transactions)); }, [transactions]);
   useEffect(() => { localStorage.setItem('money-flow-goals', JSON.stringify(goals));        }, [goals]);
   useEffect(() => { localStorage.setItem('money-flow-debts', JSON.stringify(debts));        }, [debts]);
   useEffect(() => { localStorage.setItem('money-flow-subs',  JSON.stringify(subscriptions));}, [subscriptions]);
   useEffect(() => { localStorage.setItem('money-flow-piggy', JSON.stringify(piggyBanks));    }, [piggyBanks]);
   useEffect(() => { localStorage.setItem('money-flow-banks', JSON.stringify(banks));        }, [banks]);
+  useEffect(() => { localStorage.setItem('money-flow-businesses', JSON.stringify(businesses)); }, [businesses]);
+  useEffect(() => { localStorage.setItem('money-flow-business-txs', JSON.stringify(businessTransactions)); }, [businessTransactions]);
+  useEffect(() => { localStorage.setItem('money-flow-business-workers', JSON.stringify(businessWorkers)); }, [businessWorkers]);
 
   // --- INTEGRACIÓN AUTH ---
   useEffect(() => {
@@ -543,6 +620,16 @@ function AppContent() {
     );
   }
 
+  if (showLanding) {
+    return (
+      <LandingPage 
+        onInstallClick={handleInstallClick} 
+        installPromptReady={!!deferredPrompt} 
+        onSkip={skipLanding}
+      />
+    );
+  }
+
   if (!session) {
     return <Login />;
   }
@@ -757,135 +844,132 @@ function AppContent() {
 
         {activeTab === 'varios' && (
           <div style={{ padding: '0 0 20px' }}>
-            {/* Selector Dropdown Varios */}
-            <div style={{ position: 'relative', padding: '0 16px 20px' }}>
-              <button
-                onClick={() => setIsVariosMenuOpen(!isVariosMenuOpen)}
-                style={{
-                  width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '14px 18px', borderRadius: '16px',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'white', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '600',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>
-                    {variosTab === 'goals' && '🎯'}
-                    {variosTab === 'subs' && '📅'}
-                    {variosTab === 'ahorro' && '🐷'}
-                    {variosTab === 'debts' && '🤝'}
-                  </span>
-                  <span>
-                    {variosTab === 'goals' && 'Presupuesto'}
-                    {variosTab === 'subs' && 'Gastos Fijos'}
-                    {variosTab === 'ahorro' && 'Cochinitos'}
-                    {variosTab === 'debts' && 'Deudas'}
-                  </span>
+            {variosTab === 'menu' ? (
+              <div className="animate-fade" style={{ padding: '0 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {[
+                  { id: 'goals',  label: 'Presupuesto', icon: '🎯', desc: 'Gestiona límites', color: 'rgba(255, 45, 85, 0.15)', text: '#FF2D55' },
+                  { id: 'subs',   label: 'Gastos Fijos', icon: '📅', desc: 'Suscripciones', color: 'rgba(0, 122, 255, 0.15)', text: '#007AFF' },
+                  { id: 'ahorro', label: 'Cochinitos',  icon: '🐷', desc: 'Alcanza metas', color: 'rgba(255, 149, 0, 0.15)', text: '#FF9500' },
+                  { id: 'debts',  label: 'Deudas',     icon: '🤝', desc: 'Compartidas', color: 'rgba(52, 199, 89, 0.15)', text: '#34C759' },
+                  { id: 'minegocio', label: 'Mi Negocio', icon: '💼', desc: 'Finanzas empresariales', color: 'rgba(196, 251, 109, 0.15)', text: 'var(--primary)' }
+                ].map(op => (
+                  <button key={op.id} onClick={() => setVariosTab(op.id)}
+                    style={{
+                      background: 'var(--surface-color)',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      borderRadius: '24px',
+                      padding: '24px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '12px',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                      transition: 'transform 0.2s, background 0.2s'
+                    }}
+                  >
+                    <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: op.color, color: op.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem' }}>
+                      {op.icon}
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontWeight: '700', fontSize: '1rem', color: 'white', marginBottom: '4px' }}>{op.label}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: '1.2' }}>{op.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="animate-fade">
+                {/* Header Sub-sección con botón Volver */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px 20px', gap: '12px' }}>
+                  <button onClick={() => setVariosTab('menu')}
+                    style={{
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '50%', width: '40px', height: '40px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'white', cursor: 'pointer', fontSize: '1.2rem',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    ←
+                  </button>
+                  <h2 style={{ fontSize: '1.3rem', fontWeight: '800' }}>
+                    {variosTab === 'goals' && '🎯 Presupuesto'}
+                    {variosTab === 'subs' && '📅 Gastos Fijos'}
+                    {variosTab === 'ahorro' && '🐷 Cochinitos'}
+                    {variosTab === 'debts' && '🤝 Deudas'}
+                    {variosTab === 'minegocio' && '💼 Mi Negocio'}
+                  </h2>
                 </div>
-                <span style={{ 
-                  transform: isVariosMenuOpen ? 'rotate(180deg)' : 'rotate(0)', 
-                  transition: 'transform 0.3s',
-                  fontSize: '0.8rem', opacity: 0.5
-                }}>
-                  ▼
-                </span>
-              </button>
 
-              {isVariosMenuOpen && (
-                <>
-                  <div 
-                    onClick={() => setIsVariosMenuOpen(false)}
-                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }}
-                  />
-                  
-                  <div className="animate-fade" style={{
-                    position: 'absolute', top: '100%', left: '16px', right: '16px',
-                    background: 'rgba(20,20,24,0.95)', backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px',
-                    marginTop: '8px', zIndex: 100, overflow: 'hidden',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
-                  }}>
-                    {[
-                      { id: 'goals',  label: 'Presupuesto', icon: '🎯' },
-                      { id: 'subs',   label: 'Gastos Fijos', icon: '📅' },
-                      { id: 'ahorro', label: 'Cochinitos',  icon: '🐷' },
-                      { id: 'debts',  label: 'Deudas',     icon: '🤝' }
-                    ].map(st => (
-                      <button
-                        key={st.id}
-                        onClick={() => { setVariosTab(st.id); setIsVariosMenuOpen(false); }}
-                        style={{
-                          width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-                          padding: '14px 20px', border: 'none', background: variosTab === st.id ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
-                          color: variosTab === st.id ? 'var(--primary)' : 'var(--text-dim)',
-                          cursor: 'pointer', textAlign: 'left', fontSize: '0.9rem', fontWeight: '500'
-                        }}
-                      >
-                        <span style={{ fontSize: '1.2rem' }}>{st.icon}</span>
-                        {st.label}
-                        {variosTab === st.id && <span style={{ marginLeft: 'auto', color: 'var(--primary)' }}>✓</span>}
-                      </button>
-                    ))}
+                {/* Contenido dinámico de Varios */}
+                {variosTab === 'goals' && (
+                  <div className="animate-fade">
+                    <GoalsSection income={totalIncome} expenses={totalExpenses} goals={goals} onSaveGoals={setGoals} transactions={filteredTxs} />
                   </div>
-                </>
-              )}
-            </div>
+                )}
+                
+                {variosTab === 'subs' && (
+                  <div className="animate-fade">
+                    <SubscriptionsTab 
+                      subscriptions={subscriptions} 
+                      onAddSubscription={addSubscription}
+                      onDeleteSubscription={deleteSubscription}
+                      accounts={ACCOUNTS}
+                    />
+                  </div>
+                )}
 
-            {/* Contenido dinámico de Varios */}
-            {variosTab === 'goals' && (
-              <div className="animate-fade">
-                <GoalsSection income={totalIncome} expenses={totalExpenses} goals={goals} onSaveGoals={setGoals} transactions={filteredTxs} />
-              </div>
-            )}
-            
-            {variosTab === 'subs' && (
-              <div className="animate-fade">
-                <SubscriptionsTab 
-                  subscriptions={subscriptions} 
-                  onAddSubscription={addSubscription}
-                  onDeleteSubscription={deleteSubscription}
-                  accounts={ACCOUNTS}
-                />
-              </div>
-            )}
+                {variosTab === 'ahorro' && (
+                  <div className="animate-fade">
+                    <PiggyBankTab 
+                      piggyBanks={piggyBanks}
+                      onAddPiggy={addPiggy}
+                      onAddFunds={fundPiggy}
+                      onDeletePiggy={deletePiggy}
+                      availableBalance={balance}
+                    />
+                  </div>
+                )}
 
-            {variosTab === 'ahorro' && (
-              <div className="animate-fade">
-                <PiggyBankTab 
-                  piggyBanks={piggyBanks}
-                  onAddPiggy={addPiggy}
-                  onAddFunds={fundPiggy}
-                  onDeletePiggy={deletePiggy}
-                  availableBalance={balance}
-                />
-              </div>
-            )}
-
-            {variosTab === 'debts' && (
-              <div className="animate-fade">
-                <DebtsTab 
-                  debts={debts} 
-                  onAddDebt={addDebt} 
-                  onDeleteDebt={deleteDebt} 
-                  onTogglePaid={togglePaid} 
-                  onPartialPayment={partialPayDebt} 
-                  dateFilterType={dateFilterType}
-                  startDate={startDate}
-                  endDate={endDate}
-                  filterMonth={filterMonth}
-                  filterYear={filterYear}
-                />
+                {variosTab === 'debts' && (
+                  <div className="animate-fade">
+                    <DebtsTab 
+                      debts={debts} 
+                      onAddDebt={addDebt} 
+                      onDeleteDebt={deleteDebt} 
+                      onTogglePaid={togglePaid} 
+                      onPartialPayment={partialPayDebt} 
+                      dateFilterType={dateFilterType}
+                      startDate={startDate}
+                      endDate={endDate}
+                      filterMonth={filterMonth}
+                      filterYear={filterYear}
+                    />
+                  </div>
+                )}
+                
+                {variosTab === 'minegocio' && (
+                  isBusinessUnlocked ? (
+                    <BusinessDashboard 
+                      businesses={businesses} 
+                      addBusiness={(b) => setBusinesses(prev => [...prev, b])}
+                      transactions={businessTransactions}
+                      setTransactions={setBusinessTransactions}
+                      workers={businessWorkers}
+                      setWorkers={setBusinessWorkers}
+                    />
+                  ) : (
+                    <BusinessGate onAccessGranted={() => setIsBusinessUnlocked(true)} />
+                  )
+                )}
+                
+                {/* Cierre del condicional variosTab === 'menu' */}
+                {variosTab !== 'menu' && <div style={{ paddingBottom: '20px' }}></div>}
               </div>
             )}
           </div>
         )}
-
-
-
-
-
-
 
         {activeTab === 'settings' && (
           <div style={{ padding: '8px 0' }}>
@@ -905,6 +989,13 @@ function AppContent() {
       }}>
         {NAV_TABS.map(tab => (
           <button key={tab.id} onClick={() => {
+            if (tab.id === 'varios') {
+              if (activeTab === 'varios' && variosTab !== 'menu') {
+                setVariosTab('menu'); // If already in 'varios' and in a sub-section, go back to 'menu'
+              } else if (activeTab !== 'varios') {
+                setVariosTab('menu'); // If coming from another tab, always go to 'varios' menu
+              }
+            }
             if (tab.id !== 'add') setEditingTransaction(null);
             setActiveTab(tab.id);
           }}

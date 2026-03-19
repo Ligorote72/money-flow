@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../data/categories';
-import { formatCurrency } from '../utils/helpers';
+import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
 const INCOME_CATEGORIES  = CATEGORIES.filter(c => ['salary','freelance','other_income','savings'].includes(c.id));
 const EXPENSE_CATEGORIES = CATEGORIES.filter(c => !['salary','freelance','other_income'].includes(c.id));
@@ -126,12 +126,13 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
             {amount && <span style={{ color: 'var(--primary)', fontWeight: '600' }}>{formatCurrency(parseFloat(amount))}</span>}
           </label>
           <input
-            type="number"
-            placeholder="0"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            type="text"
+            inputMode="numeric"
+            placeholder="$ 0"
+            value={formatInputAmount(amount)}
+            onChange={(e) => setAmount(parseInputAmount(e.target.value))}
             required
-            style={{ fontSize: '1.1rem', fontWeight: '600' }}
+            style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.02em' }}
           />
         </div>
 
