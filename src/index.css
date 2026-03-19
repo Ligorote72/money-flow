@@ -255,6 +255,17 @@ input:focus, select:focus {
   font-weight: 600;
 }
 
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  padding-bottom: 110px;
+}
+
 .header-actions {
   display: flex;
   gap: 10px;
