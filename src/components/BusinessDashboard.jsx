@@ -7,7 +7,8 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
   
   // New Business Form State
   const [newBizName, setNewBizName] = useState('');
-  const [newBizType, setNewBizType] = useState('Finca Cafetera');
+  const [newBizType, setNewBizType] = useState('Finca');
+  const [newBizSubtype, setNewBizSubtype] = useState('Café');
   const [newBizCapital, setNewBizCapital] = useState('');
 
   // Transactions State
@@ -32,7 +33,7 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
     const newBiz = {
       id: Date.now().toString(),
       name: newBizName,
-      type: newBizType
+      type: newBizType === 'Finca' ? newBizSubtype : newBizType
     };
     addBusiness(newBiz);
     
@@ -114,8 +115,8 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
   const bizType = useMemo(() => {
     if (!activeBusiness) return 'other';
     const type = activeBusiness.type.toLowerCase();
-    if (type.includes('finca') || type.includes('café') || type.includes('cafe') || type.includes('caficultura')) return 'coffee';
-    if (type.includes('ganadería') || type.includes('ganaderia') || type.includes('lechería') || type.includes('lecheria')) return 'livestock';
+    if (type.includes('café') || type.includes('cafe') || type.includes('caficultura')) return 'coffee';
+    if (type.includes('ganadería') || type.includes('ganaderia') || type.includes('leche') || type.includes('queso')) return 'livestock';
     return 'other';
   }, [activeBusiness]);
 
@@ -143,17 +144,55 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
             <input type="text" value={newBizName} onChange={e => setNewBizName(e.target.value)} placeholder="Ej: Finca La Esperanza..." required />
           </div>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Tipo</label>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Categoría del Negocio</label>
             <select value={newBizType} onChange={e => setNewBizType(e.target.value)}>
-              <option value="Finca Cafetera">Finca Cafetera (Café)</option>
-              <option value="Ganadería">Ganadería (Leche/Queso/Carne)</option>
-              <option value="Servicios">Servicios</option>
-              <option value="Comercio">Comercio (Venta de productos)</option>
-              <option value="Digital">Negocio Digital</option>
-              <option value="Gastronomía">Gastronomía</option>
-              <option value="Otro">Otro</option>
+              <option value="Finca">🚜 Agropecuario (Finca)</option>
+              <option value="Servicios">🛠️ Servicios</option>
+              <option value="Comercio">🛍️ Comercio / Tienda</option>
+              <option value="Gastronomía">🍽️ Gastronomía</option>
+              <option value="Digital">💻 Negocio Digital</option>
+              <option value="Otro">❓ Otro</option>
             </select>
           </div>
+
+          {newBizType === 'Finca' && (
+            <div className="animate-fade" style={{ marginBottom: '16px', background: 'rgba(var(--primary-rgb), 0.05)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(var(--primary-rgb), 0.1)' }}>
+              <label style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: '600', marginBottom: '12px', display: 'block' }}>¿Qué tipo de Finca manejas?</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button 
+                  type="button"
+                  onClick={() => setNewBizSubtype('Café')}
+                  style={{ 
+                    padding: '12px', borderRadius: '12px', border: '1px solid',
+                    background: newBizSubtype === 'Café' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                    color: newBizSubtype === 'Café' ? '#000' : '#fff',
+                    borderColor: newBizSubtype === 'Café' ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                    fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer'
+                  }}>☕ Café</button>
+                <button 
+                  type="button"
+                  onClick={() => setNewBizSubtype('Ganadería')}
+                  style={{ 
+                    padding: '12px', borderRadius: '12px', border: '1px solid',
+                    background: newBizSubtype === 'Ganadería' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                    color: newBizSubtype === 'Ganadería' ? '#000' : '#fff',
+                    borderColor: newBizSubtype === 'Ganadería' ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                    fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer'
+                  }}>🐄 Ganadería</button>
+                <button 
+                  type="button"
+                  onClick={() => setNewBizSubtype('Agricultura General')}
+                  style={{ 
+                    padding: '12px', borderRadius: '12px', border: '1px solid',
+                    gridColumn: '1 / -1',
+                    background: newBizSubtype === 'Agricultura General' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                    color: newBizSubtype === 'Agricultura General' ? '#000' : '#fff',
+                    borderColor: newBizSubtype === 'Agricultura General' ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                    fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer'
+                  }}>🍏 Otros (Frutas/Verduras)</button>
+              </div>
+            </div>
+          )}
           <div style={{ marginBottom: '24px' }}>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Capital Inicial (Opcional)</label>
             <input type="text" inputMode="numeric" placeholder="Ej: $ 1.000.000" 
