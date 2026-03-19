@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
 const QuickActionModal = ({ action, onSave, onClose }) => {
@@ -101,8 +101,38 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
   const [payWorkerId, setPayWorkerId] = useState(null);
   const [payUnits, setPayUnits] = useState('');
 
-  const activeBusiness = businesses.find(b => b.id === activeBusinessId);
+  // 1. Business Context Memos
+  const activeBusiness = useMemo(() => (businesses || []).find(b => b.id === activeBusinessId), [businesses, activeBusinessId]);
 
+  const bizType = useMemo(() => {
+    if (!activeBusiness || !activeBusiness.type) return 'other';
+    const type = activeBusiness.type.toLowerCase();
+    if (type.includes('café') || type.includes('cafe')) return 'coffee';
+    if (type.includes('ganadería') || type.includes('ganaderia')) return 'livestock';
+    return 'other';
+  }, [activeBusiness]);
+
+  const isFinca = bizType === 'coffee';
+
+  // 2. Data Memos
+  const activeBizTxs = useMemo(() => (transactions || []).filter(t => t.businessId === activeBusinessId), [transactions, activeBusinessId]);
+  const activeWorkers = useMemo(() => (workers || []).filter(w => w.businessId === activeBusinessId), [workers, activeBusinessId]);
+
+  const stats = useMemo(() => {
+    const income = activeBizTxs.filter(t => t.type === 'income').reduce((a, b) => a + (b.amount || 0), 0);
+    const expense = activeBizTxs.filter(t => t.type === 'expense').reduce((a, b) => a + (b.amount || 0), 0);
+    return { income, expense, balance: income - expense };
+  }, [activeBizTxs]);
+
+  // 3. Effects
+  useEffect(() => {
+    if (isAddingWorker) {
+      if (bizType === 'coffee') setWorkerType('recolector_arroba');
+      else setWorkerType('jornal');
+    }
+  }, [isAddingWorker, bizType]);
+
+  // 4. Handlers
   const handleAddBusiness = (e) => {
     e.preventDefault();
     if (!newBizName.trim()) return;
@@ -211,31 +241,25 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
     
     const units = parseFloat(payUnits);
     const amount = units * (worker.rate || 0);
-    const unitLabel = worker.type === 'recolector' ? 'Kg' : (worker.type === 'recolector_arroba' ? '@' : 'días');
+    
+    const getUnitLabel = (type) => {
+      switch(type) {
+        case 'recolector': return 'Kg';
+        case 'recolector_arroba': return '@';
+        case 'jornal': return 'días';
+        case 'comision': return 'unidades';
+        case 'tarea': return 'tareas';
+        default: return 'unidades';
+      }
+    };
+
+    const unitLabel = getUnitLabel(worker.type);
     const desc = `Pago Trabajador: ${worker.name} (${units} ${unitLabel})`;
       
     handleAddTx(null, desc, 'expense', amount);
     setPayWorkerId(null);
     setPayUnits('');
   };
-
-  const bizType = useMemo(() => {
-    if (!activeBusiness) return 'other';
-    const type = activeBusiness.type.toLowerCase();
-    if (type.includes('café') || type.includes('cafe')) return 'coffee';
-    if (type.includes('ganadería') || type.includes('ganaderia')) return 'livestock';
-    return 'other';
-  }, [activeBusiness]);
-
-  const isFinca = bizType === 'coffee';
-  const activeBizTxs = useMemo(() => transactions.filter(t => t.businessId === activeBusinessId), [transactions, activeBusinessId]);
-  const activeWorkers = useMemo(() => (workers || []).filter(w => w.businessId === activeBusinessId), [workers, activeBusinessId]);
-
-  const stats = useMemo(() => {
-    const income = activeBizTxs.filter(t => t.type === 'income').reduce((a, b) => a + b.amount, 0);
-    const expense = activeBizTxs.filter(t => t.type === 'expense').reduce((a, b) => a + b.amount, 0);
-    return { income, expense, balance: income - expense };
-  }, [activeBizTxs]);
 
   if (businesses.length === 0 || isAddingBusiness) {
     return (
@@ -343,7 +367,7 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
             </div>
           </div>
 
-          {isFinca && (
+          {activeBusiness && (
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '14px' }}>
               <button onClick={() => setActiveTab('finances')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: activeTab === 'finances' ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === 'finances' ? 'white' : 'var(--text-dim)', fontWeight: '600' }}>Finanzas</button>
               <button onClick={() => setActiveTab('workers')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: activeTab === 'workers' ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === 'workers' ? 'white' : 'var(--text-dim)', fontWeight: '600' }}>Trabajadores ({activeWorkers.length})</button>
@@ -431,9 +455,24 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
                 <form onSubmit={handleAddWorker} style={{ background: 'var(--surface-color)', padding: '16px', borderRadius: '20px', marginBottom: '20px' }}>
                   <input type="text" placeholder="Nombre" value={workerName} onChange={e => setWorkerName(e.target.value)} required />
                   <select value={workerType} onChange={e => setWorkerType(e.target.value)} style={{ marginTop: '12px' }}>
-                    <option value="recolector">Kg Recolectado</option>
-                    <option value="recolector_arroba">@ Arroba</option>
-                    <option value="jornal">Día (Jornal)</option>
+                    {bizType === 'coffee' ? (
+                      <>
+                        <option value="recolector">Kg Recolectado</option>
+                        <option value="recolector_arroba">@ Arroba</option>
+                        <option value="jornal">Día (Jornal)</option>
+                      </>
+                    ) : bizType === 'livestock' ? (
+                      <>
+                        <option value="jornal">Día (Jornal)</option>
+                        <option value="tarea">Tarea / Mantenimiento</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="jornal">Día (Jornal)</option>
+                        <option value="comision">Por Ventas / Comisión</option>
+                        <option value="tarea">Tarea / Proyecto</option>
+                      </>
+                    )}
                   </select>
                   <input type="text" inputMode="numeric" placeholder="Precio ($)" value={formatInputAmount(workerRate)} onChange={e => setWorkerRate(parseInputAmount(e.target.value))} required style={{ marginTop: '12px' }} />
                   <button type="submit" className="btn-primary" style={{ width: '100%', padding: '12px', marginTop: '16px' }}>Guardar</button>
@@ -456,7 +495,12 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
                       <form onSubmit={(e) => handlePayWorker(e, w)} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>
-                            Cant. {w.type === 'recolector' ? 'Kg' : (w.type === 'recolector_arroba' ? '@ Arrobas' : 'Días')}
+                            Cant. {
+                              w.type === 'recolector' ? 'Kg' : 
+                              w.type === 'recolector_arroba' ? '@ Arrobas' : 
+                              w.type === 'jornal' ? 'Días' : 
+                              w.type === 'comision' ? 'Ventas' : 'Tareas'
+                            }
                           </label>
                           <input type="number" step="0.01" placeholder="Ej: 10" value={payUnits} onChange={e => setPayUnits(e.target.value)} required style={{ width: '100%' }} />
                         </div>

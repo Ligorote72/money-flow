@@ -307,10 +307,14 @@ export function useFinanceData() {
     setBusinesses(prev => [...prev, business]);
     
     if (session) {
-      await supabase.from('businesses').insert({
-        ...business,
-        user_id: session.user.id
-      });
+      try {
+        await supabase.from('businesses').insert({
+          ...business,
+          user_id: session.user.id
+        });
+      } catch (err) {
+        console.error('Error syncing business to Supabase:', err);
+      }
     }
   };
 
@@ -321,7 +325,13 @@ export function useFinanceData() {
       setBusinessWorkers(prev => prev.filter(w => w.businessId !== id));
       
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      if (isUUID) await deleteFromSupabase('businesses', id);
+      if (isUUID) {
+        try {
+          await deleteFromSupabase('businesses', id);
+        } catch (err) {
+          console.error('Error deleting business from Supabase:', err);
+        }
+      }
     }
   };
 
@@ -329,7 +339,11 @@ export function useFinanceData() {
     setBusinesses(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     if (isUUID) {
-      await supabase.from('businesses').update(updates).eq('id', id);
+      try {
+        await supabase.from('businesses').update(updates).eq('id', id);
+      } catch (err) {
+        console.error('Error updating business in Supabase:', err);
+      }
     }
   };
 
