@@ -7,8 +7,7 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
   
   // New Business Form State
   const [newBizName, setNewBizName] = useState('');
-  const [newBizType, setNewBizType] = useState('Servicios');
-  const [newBizEmployees, setNewBizEmployees] = useState('1');
+  const [newBizType, setNewBizType] = useState('Finca Cafetera');
   const [newBizCapital, setNewBizCapital] = useState('');
 
   // Transactions State
@@ -33,8 +32,7 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
     const newBiz = {
       id: Date.now().toString(),
       name: newBizName,
-      type: newBizType,
-      employees: parseInt(newBizEmployees) || 1
+      type: newBizType
     };
     addBusiness(newBiz);
     
@@ -54,7 +52,6 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
     setActiveBusinessId(newBiz.id);
     setIsAddingBusiness(false);
     setNewBizName('');
-    setNewBizEmployees('1');
     setNewBizCapital('');
   };
 
@@ -114,7 +111,11 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
   };
 
   const activeBusiness = businesses.find(b => b.id === activeBusinessId);
-  const isFinca = activeBusiness?.type === 'Finca Cafetera';
+  const isFinca = useMemo(() => {
+    if (!activeBusiness) return false;
+    const type = activeBusiness.type.toLowerCase();
+    return type.includes('finca') || type.includes('café') || type.includes('cafe') || type.includes('caficultura');
+  }, [activeBusiness]);
 
   const activeBizTxs = useMemo(() => transactions.filter(t => t.businessId === activeBusinessId), [transactions, activeBusinessId]);
   const activeWorkers = useMemo(() => (workers || []).filter(w => w.businessId === activeBusinessId), [workers, activeBusinessId]);
@@ -147,9 +148,6 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
               <option value="Otro">Otro</option>
             </select>
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Nº de Trabajadores Inicial</label>
-            <input type="number" min="1" value={newBizEmployees} onChange={e => setNewBizEmployees(e.target.value)} required />
           </div>
           <div style={{ marginBottom: '24px' }}>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Capital Inicial (Opcional)</label>
