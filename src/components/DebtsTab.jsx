@@ -1,279 +1,227 @@
 import React, { useState } from 'react';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
-const DEBT_TYPES = [
-  { id: 'owe',  label: 'Les debo', color: '#FF3B30' },
-  { id: 'owed', label: 'Me deben', color: '#34C759' },
-];
-
-// Mini panel de pago que aparece debajo de la deuda
-const PaymentPanel = ({ debt, onFullPayment, onPartialPayment, onCancel }) => {
-  const [mode, setMode]         = useState(null); // null | 'partial'
+const PaymentOverlay = ({ debt, onFullPayment, onPartialPayment, onClose }) => {
   const [partialAmount, setPartialAmount] = useState('');
+  const [isPartial, setIsPartial] = useState(false);
 
-  const c = debt.type === 'owe' ? '#FF3B30' : '#34C759';
+  const c = debt.type === 'owe' ? 'var(--expense)' : 'var(--income)';
 
   const handlePartial = () => {
     const amt = parseFloat(partialAmount);
     if (!amt || amt <= 0 || amt > debt.amount) return;
     onPartialPayment(debt.id, amt);
+    onClose();
   };
 
   return (
-    <div style={{
-      marginTop: '6px', padding: '12px 14px',
-      background: 'rgba(255,255,255,0.06)',
-      borderRadius: '12px',
-      border: '1px solid rgba(255,255,255,0.1)',
-      animation: 'fadeIn 0.2s ease-out',
-    }}>
-      {mode === null ? (
-        <>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '10px' }}>
-            ¿Cómo fue el pago?
-          </p>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              onClick={onFullPayment}
-              style={{
-                flex: 1, padding: '10px', border: 'none', borderRadius: '10px',
-                background: `${c}22`, color: c,
-                cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem',
-              }}
-            >✅ Pago total</button>
-            <button
-              onClick={() => setMode('partial')}
-              style={{
-                flex: 1, padding: '10px', border: 'none', borderRadius: '10px',
-                background: 'rgba(255,159,10,0.15)', color: '#FF9F0A',
-                cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem',
-              }}
-            >💰 Pago parcial</button>
-            <button
-              onClick={onCancel}
-              style={{
-                padding: '10px 14px', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '10px', background: 'transparent',
-                color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.85rem',
-              }}
-            >Cancelar</button>
-          </div>
-        </>
+    <div className="animate-fade" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', borderRadius: '24px', display: 'flex', flexDirection: 'column', padding: '12px', zIndex: 15 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{isPartial ? 'Abonar' : '¿Cómo fue el pago?'}</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.2rem' }}>×</button>
+      </div>
+
+      {!isPartial ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'center' }}>
+          <button onClick={onFullPayment} style={{ background: `${c}22`, color: c, border: `1px solid ${c}40`, borderRadius: '12px', padding: '10px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>✅ Pago Total</button>
+          <button onClick={() => setIsPartial(true)} style={{ background: 'rgba(255,159,10,0.15)', color: '#FF9F0A', border: '1px solid #FF9F0A40', borderRadius: '12px', padding: '10px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>💰 Pago Parcial</button>
+        </div>
       ) : (
-        <>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-            ¿Cuánto abonó? (máx {formatCurrency(debt.amount)})
-            {partialAmount && <span style={{ color: '#FF9F0A', fontWeight: '600' }}>{formatCurrency(parseFloat(partialAmount))}</span>}
-          </p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="Monto abonado"
-              value={formatInputAmount(partialAmount)}
-              onChange={e => setPartialAmount(parseInputAmount(e.target.value))}
-              style={{ flex: 1, margin: 0, padding: '10px 12px', fontSize: '0.9rem' }}
-              autoFocus
-            />
-            <button
-              onClick={handlePartial}
-              disabled={!partialAmount || parseFloat(partialAmount) <= 0}
-              style={{
-                padding: '10px 16px', border: 'none', borderRadius: '10px',
-                background: 'rgba(255,159,10,0.2)', color: '#FF9F0A',
-                cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem',
-              }}
-            >Aplicar</button>
-            <button
-              onClick={() => setMode(null)}
-              style={{
-                padding: '10px', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '10px', background: 'transparent',
-                color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.85rem',
-              }}
-            >‹</button>
-          </div>
-        </>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'center' }}>
+          <p style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textAlign: 'center' }}>Máx: {formatCurrency(debt.amount)}</p>
+          <input 
+            type="text" inputMode="numeric" placeholder="Monto" autoFocus
+            style={{ fontSize: '0.85rem', padding: '10px', textAlign: 'center' }}
+            value={formatInputAmount(partialAmount)} 
+            onChange={e => setPartialAmount(parseInputAmount(e.target.value))}
+          />
+          <button 
+            onClick={handlePartial}
+            disabled={!partialAmount || parseFloat(partialAmount) <= 0 || parseFloat(partialAmount) > debt.amount}
+            style={{ background: 'var(--primary)', color: 'black', border: 'none', borderRadius: '10px', padding: '10px', fontWeight: '700', fontSize: '0.8rem' }}
+          >Confirmar</button>
+          <button onClick={() => setIsPartial(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.7rem' }}>Volver</button>
+        </div>
       )}
     </div>
   );
 };
 
-const DebtsTab = ({ debts, onAddDebt, onDeleteDebt, onTogglePaid, onPartialPayment, dateFilterType, startDate, endDate, filterMonth, filterYear }) => {
-  const [description, setDescription] = useState('');
-  const [amount, setAmount]           = useState('');
-  const [person, setPerson]           = useState('');
-  const [type, setType]               = useState('owe');
-  const [showForm, setShowForm]       = useState(false);
-  const [payingId, setPayingId]       = useState(null); // id de deuda con panel abierto
+const DebtsTab = ({ debts, addDebt, deleteDebt, updateDebt, onTogglePaid, onPartialPayment }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [editingDebt, setEditingDebt] = useState(null);
+  const [payingId, setPayingId] = useState(null);
+  const [menuOpenId, setMenuOpenId] = useState(null);
 
-  const handleSubmit = (e) => {
+  // Form states
+  const [person, setPerson] = useState('');
+  const [amount, setAmount] = useState('');
+  const [type, setType] = useState('owe');
+  const [description, setDescription] = useState('');
+
+  const handleCreateOrUpdate = (e) => {
     e.preventDefault();
-    if (!amount || !person) return;
-    onAddDebt({
-      id: Date.now(),
-      description: description.trim() || `Deuda con ${person}`,
+    if (!person || !amount) return;
+
+    const data = {
       person: person.trim(),
       amount: parseFloat(amount),
       type,
-      paid: false,
-      date: new Date().toISOString(),
-    });
-    setDescription(''); setAmount(''); setPerson('');
-    setShowForm(false);
+      description: description.trim() || `Deuda con ${person.trim()}`,
+      paid: editingDebt ? editingDebt.paid : false,
+      date: editingDebt ? editingDebt.date : new Date().toISOString(),
+    };
+
+    if (editingDebt) {
+      updateDebt(editingDebt.id, data);
+    } else {
+      addDebt({ ...data, id: Date.now().toString() });
+    }
+
+    resetForm();
   };
 
-  // Aplicar filtro de fecha (Mensual o Rango)
-  const filteredDebts = debts.filter(d => {
-    const dDate = new Date(d.date || d.id);
-    if (dateFilterType === 'month') {
-      return dDate.getMonth() === filterMonth && dDate.getFullYear() === filterYear;
-    } else {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      start.setHours(0,0,0,0);
-      end.setHours(23,59,59,999);
-      return dDate >= start && dDate <= end;
-    }
-  });
+  const resetForm = () => {
+    setPerson('');
+    setAmount('');
+    setType('owe');
+    setDescription('');
+    setShowForm(false);
+    setEditingDebt(null);
+  };
 
-  const owedToMe    = filteredDebts.filter(d => d.type === 'owed' && !d.paid).reduce((a, d) => a + d.amount, 0);
-  const iOwe        = filteredDebts.filter(d => d.type === 'owe'  && !d.paid).reduce((a, d) => a + d.amount, 0);
-  const activeDebts = filteredDebts.filter(d => !d.paid);
-  const paidDebts   = filteredDebts.filter(d =>  d.paid);
+  const startEdit = (d) => {
+    setEditingDebt(d);
+    setPerson(d.person);
+    setAmount(d.amount.toString());
+    setType(d.type);
+    setDescription(d.description || '');
+    setShowForm(true);
+    setMenuOpenId(null);
+  };
+
+  const confirmDelete = (id) => {
+    if (window.confirm('¿Eliminar este registro de deuda?')) {
+      deleteDebt(id);
+      setMenuOpenId(null);
+    }
+  };
+
+  const activeDebts = debts.filter(d => !d.paid);
+  const paidDebts = debts.filter(d => d.paid);
+
+  const owedToMe = activeDebts.filter(d => d.type === 'owed').reduce((a, d) => a + d.amount, 0);
+  const iOwe = activeDebts.filter(d => d.type === 'owe').reduce((a, d) => a + d.amount, 0);
 
   return (
-    <div className="card animate-fade" style={{ marginTop: '0' }}>
-      <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>🤝 Deudas y Préstamos</h3>
-
-      {/* Resumen */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        {[
-          { label: 'Me deben', value: owedToMe, color: '#34C759' },
-          { label: 'Debo',     value: iOwe,     color: '#FF3B30' },
-        ].map(item => (
-          <div key={item.label} style={{
-            flex: 1, padding: '12px', borderRadius: '14px',
-            background: `${item.color}15`, border: `1px solid ${item.color}30`, textAlign: 'center',
-          }}>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginBottom: '4px' }}>{item.label}</p>
-            <p style={{ fontWeight: '700', color: item.color, fontSize: '1rem' }}>{formatCurrency(item.value)}</p>
-          </div>
-        ))}
+    <div className="animate-fade">
+      <div style={{ display: 'flex', gap: '10px', padding: '0 16px', marginBottom: '20px' }}>
+        <div style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'rgba(52, 199, 89, 0.1)', border: '1px solid rgba(52, 199, 89, 0.2)', textAlign: 'center' }}>
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginBottom: '4px' }}>Me deben</p>
+          <p style={{ fontWeight: '800', color: '#34c759', fontSize: '0.95rem' }}>{formatCurrency(owedToMe)}</p>
+        </div>
+        <div style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'rgba(255, 59, 48, 0.1)', border: '1px solid rgba(255, 59, 48, 0.2)', textAlign: 'center' }}>
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginBottom: '4px' }}>Debo</p>
+          <p style={{ fontWeight: '800', color: '#ff3b30', fontSize: '0.95rem' }}>{formatCurrency(iOwe)}</p>
+        </div>
       </div>
 
-      {/* Botón agregar / Formulario */}
-      {!showForm ? (
-        <button onClick={() => setShowForm(true)} className="btn-primary" style={{ width: '100%', marginBottom: '16px' }}>
-          + Registrar deuda
-        </button>
-      ) : (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px' }}>
-            {DEBT_TYPES.map(t => (
-              <button key={t.id} type="button" onClick={() => setType(t.id)} style={{
-                flex: 1, padding: '10px', border: 'none', borderRadius: '10px', cursor: 'pointer',
-                fontWeight: '600', fontSize: '0.85rem', transition: 'all 0.2s',
-                background: type === t.id ? `${t.color}22` : 'transparent',
-                color: type === t.id ? t.color : 'var(--text-dim)',
-              }}>{t.label}</button>
-            ))}
-          </div>
-          <input type="text" placeholder="Persona *" value={person} onChange={e => setPerson(e.target.value)} required />
-          <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
-            Monto *
-            {amount && <span style={{ color: 'var(--primary)', fontWeight: '600' }}>{formatCurrency(parseFloat(amount))}</span>}
-          </label>
-          <input type="text" inputMode="numeric" placeholder="Monto *" 
-            value={formatInputAmount(amount)} 
-            onChange={e => setAmount(parseInputAmount(e.target.value))} 
-            required />
-          <input type="text" placeholder="Descripción (opcional)" value={description} onChange={e => setDescription(e.target.value)} />
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" onClick={() => setShowForm(false)} style={{
-              flex: 1, padding: '12px', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '12px', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer',
-            }}>Cancelar</button>
-            <button type="submit" className="btn-primary" style={{ flex: 2 }}>Guardar</button>
-          </div>
-        </form>
-      )}
-
-      {/* Lista activa */}
-      {activeDebts.length === 0 && !showForm && (
-        <p style={{ color: 'var(--text-dim)', textAlign: 'center', padding: '20px 0', fontSize: '0.9rem' }}>
-          No hay deudas activas 🎉
-        </p>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {activeDebts.map(debt => {
-          const c = debt.type === 'owe' ? '#FF3B30' : '#34C759';
-          return (
-            <div key={debt.id}>
-              <div style={{
-                padding: '13px 14px', borderRadius: '14px',
-                background: payingId === debt.id ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
-                borderLeft: `3px solid ${c}`,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                transition: 'background 0.2s',
-              }}>
-                <div>
-                  <p style={{ fontWeight: '600', fontSize: '0.88rem' }}>{debt.person}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{debt.description}</p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ color: c, fontWeight: '700' }}>{formatCurrency(debt.amount)}</span>
-                  {/* × abre el panel de pago */}
-                  <button
-                    onClick={() => setPayingId(payingId === debt.id ? null : debt.id)}
-                    title="Registrar pago"
-                    style={{
-                      background: payingId === debt.id ? 'rgba(255,59,48,0.15)' : 'none',
-                      border: 'none', color: payingId === debt.id ? '#FF3B30' : 'rgba(255,59,48,0.6)',
-                      cursor: 'pointer', fontSize: '1.1rem', padding: '4px 6px',
-                      borderRadius: '8px', transition: 'all 0.2s',
-                    }}
-                  >×</button>
-                </div>
+      {showForm && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <h2>{editingDebt ? 'Editar' : 'Nueva'} Deuda</h2>
+              <button onClick={resetForm}>×</button>
+            </div>
+            <form onSubmit={handleCreateOrUpdate} style={{ padding: '0 20px' }}>
+              <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', marginBottom: '16px' }}>
+                <button type="button" onClick={() => setType('owe')} style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '10px', background: type === 'owe' ? 'rgba(255,59,48,0.2)' : 'transparent', color: type === 'owe' ? '#ff3b30' : 'var(--text-dim)', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>Les debo</button>
+                <button type="button" onClick={() => setType('owed')} style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '10px', background: type === 'owed' ? 'rgba(52,199,89,0.2)' : 'transparent', color: type === 'owed' ? '#34c759' : 'var(--text-dim)', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>Me deben</button>
               </div>
 
-              {/* Panel de opciones de pago */}
+              <input type="text" placeholder="Persona" value={person} onChange={e => setPerson(e.target.value)} required />
+              
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
+                  Monto
+                  {amount && <span style={{ color: 'var(--primary)' }}>{formatCurrency(parseFloat(amount))}</span>}
+                </label>
+                <input type="text" inputMode="numeric" placeholder="Monto" 
+                  value={formatInputAmount(amount)} 
+                  onChange={e => setAmount(parseInputAmount(e.target.value))} 
+                  required />
+              </div>
+
+              <input type="text" placeholder="Descripción (opcional)" value={description} onChange={e => setDescription(e.target.value)} style={{ marginTop: '12px' }} />
+
+              <button type="submit" className="btn-primary" style={{ width: '100%', padding: '16px', marginTop: '24px' }}>
+                {editingDebt ? 'Guardar Cambios' : 'Registrar Deuda'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="varios-grid">
+        {activeDebts.map(debt => {
+          const c = debt.type === 'owe' ? '#ff3b30' : '#34c759';
+          return (
+            <div key={debt.id} className="menu-item" style={{ '--item-color': 'rgba(255,255,255,0.05)', position: 'relative', height: 'auto', minHeight: '160px', padding: '16px' }}
+              onClick={() => setPayingId(debt.id)}>
+              
+              <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === debt.id ? null : debt.id); }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.2rem', cursor: 'pointer', padding: '4px' }}
+                >⋮</button>
+                {menuOpenId === debt.id && (
+                  <div className="card" style={{ position: 'absolute', right: 0, top: '30px', padding: '4px', minWidth: '100px', zIndex: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                    <button onClick={(e) => { e.stopPropagation(); startEdit(debt); }} style={{ background: 'none', border: 'none', color: 'white', width: '100%', textAlign: 'left', padding: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>✏️ Editar</button>
+                    <button onClick={(e) => { e.stopPropagation(); confirmDelete(debt.id); }} style={{ background: 'none', border: 'none', color: '#ff3b30', width: '100%', textAlign: 'left', padding: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>🗑️ Borrar</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="icon" style={{ background: `${c}15`, color: c, fontSize: '1.6rem', marginBottom: '8px' }}>
+                {debt.type === 'owe' ? '💸' : '💰'}
+              </div>
+              <span className="label" style={{ textAlign: 'center', fontSize: '0.9rem' }}>{debt.person}</span>
+              <p style={{ fontSize: '0.85rem', fontWeight: '800', color: c, margin: '4px 0' }}>{formatCurrency(debt.amount)}</p>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textAlign: 'center' }}>{debt.description}</p>
+
               {payingId === debt.id && (
-                <PaymentPanel
-                  debt={debt}
+                <PaymentOverlay 
+                  debt={debt} 
                   onFullPayment={() => { onTogglePaid(debt.id); setPayingId(null); }}
-                  onPartialPayment={(id, amt) => { onPartialPayment(id, amt); setPayingId(null); }}
-                  onCancel={() => setPayingId(null)}
+                  onPartialPayment={onPartialPayment}
+                  onClose={() => setPayingId(null)}
                 />
               )}
             </div>
           );
         })}
 
-        {/* Historial pagadas */}
-        {paidDebts.length > 0 && (
-          <details style={{ marginTop: '8px' }}>
-            <summary style={{ color: 'var(--text-dim)', fontSize: '0.82rem', cursor: 'pointer', padding: '6px 0' }}>
-              Ver {paidDebts.length} deuda(s) pagada(s)
-            </summary>
-            {paidDebts.map(debt => (
-              <div key={debt.id} style={{
-                padding: '10px 14px', borderRadius: '12px',
-                background: 'rgba(255,255,255,0.02)', opacity: 0.5,
-                display: 'flex', justifyContent: 'space-between', marginTop: '6px',
-              }}>
-                <p style={{ fontSize: '0.85rem', textDecoration: 'line-through' }}>{debt.person} · {debt.description}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.85rem' }}>{formatCurrency(debt.amount)}</span>
-                  <button onClick={() => onDeleteDebt(debt.id)}
-                    style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.4)', cursor: 'pointer', fontSize: '1rem' }}>×</button>
-                </div>
-              </div>
-            ))}
-          </details>
-        )}
+        <button className="menu-item" onClick={() => setShowForm(true)} style={{ '--item-color': 'rgba(255,255,255,0.03)', borderStyle: 'dashed', minHeight: '160px' }}>
+          <div className="icon" style={{ background: 'none', border: '2px dashed var(--glass-border)', fontSize: '1.5rem', opacity: 0.5 }}>+</div>
+          <span className="label" style={{ opacity: 0.5 }}>Nueva</span>
+        </button>
       </div>
+
+      {paidDebts.length > 0 && (
+        <div style={{ padding: '20px 16px 0' }}>
+          <details>
+            <summary style={{ color: 'var(--text-dim)', fontSize: '0.8rem', cursor: 'pointer' }}>Ver {paidDebts.length} deudas pagadas</summary>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+              {paidDebts.map(debt => (
+                <div key={debt.id} className="card" style={{ margin: 0, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', opacity: 0.6 }}>
+                  <span style={{ fontSize: '0.8rem' }}>{debt.person} · {formatCurrency(debt.amount)}</span>
+                  <button onClick={() => deleteDebt(debt.id)} style={{ background: 'none', border: 'none', color: 'var(--expense)' }}>🗑️</button>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+      )}
     </div>
   );
 };
