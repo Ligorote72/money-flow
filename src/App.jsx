@@ -378,6 +378,22 @@ function AppContent() {
     });
   };
 
+  const adjustSavingsBalance = async (newAmount) => {
+    const currentSavings = accountBalances.savings;
+    const diff = newAmount - currentSavings;
+    if (Math.abs(diff) < 0.01) return;
+
+    await addTransaction({
+      id: Date.now(),
+      description: 'Ajuste Manual de Ahorros',
+      amount: Math.abs(diff),
+      type: diff > 0 ? 'income' : 'expense',
+      category: 'savings',
+      accountId: 'cash',
+      date: new Date().toISOString()
+    });
+  };
+
   const togglePaid = (id) => {
     // 1. Encontrar la deuda actual
     const debt = debts.find(d => d.id === id);
@@ -679,6 +695,7 @@ function AppContent() {
         banks={banks}
         onAddBank={addBank}
         onDeleteBank={deleteBank}
+        onAdjustSavings={adjustSavingsBalance}
       />
       {/* Contenido */}
       <div style={{ flex: 1, paddingBottom: '100px' }}>

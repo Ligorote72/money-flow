@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { formatCurrency } from '../utils/helpers';
+import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
-const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBalances = {}, hideBalance = false, username, totalPiggySavings = 0, banks = [], onAddBank, onDeleteBank }) => {
+const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBalances = {}, hideBalance = false, username, totalPiggySavings = 0, banks = [], onAddBank, onDeleteBank, onAdjustSavings }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
   const [newBankName, setNewBankName] = useState('');
+  const [savingsInput, setSavingsInput] = useState('');
+
   const mask = (val) => hideBalance ? '••••••' : formatCurrency(val);
 
   return (
@@ -37,12 +40,18 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
         {accounts.map(acc => (
           <div 
             key={acc.id} 
-            onClick={() => acc.id === 'bank' && setIsModalOpen(true)}
+            onClick={() => {
+              if (acc.id === 'bank') setIsModalOpen(true);
+              if (acc.id === 'savings') {
+                setSavingsInput(accountBalances.savings.toString());
+                setIsSavingsModalOpen(true);
+              }
+            }}
             style={{ 
               display: 'flex', alignItems: 'center', gap: '8px', 
               background: 'rgba(255,255,255,0.03)', padding: '8px 10px', borderRadius: '12px',
-              cursor: acc.id === 'bank' ? 'pointer' : 'default',
-              border: acc.id === 'bank' ? '1px solid rgba(255,255,255,0.05)' : 'none',
+              cursor: (acc.id === 'bank' || acc.id === 'savings') ? 'pointer' : 'default',
+              border: (acc.id === 'bank' || acc.id === 'savings') ? '1px solid rgba(255,255,255,0.05)' : 'none',
               transition: 'transform 0.2s'
             }}
             className={acc.id === 'bank' ? 'hover-scale' : ''}
@@ -124,6 +133,51 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                   className="btn-primary" style={{ padding: '0 16px', whiteSpace: 'nowrap' }}
                 >Añadir</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL DE AJUSTE DE AHORROS */}
+      {isSavingsModalOpen && (
+        <div className="animate-fade" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+          zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '360px', background: 'var(--bg-card)', border: '1px solid rgba(var(--primary-rgb), 0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>💰 Ajustar Ahorros</h3>
+              <button onClick={() => setIsSavingsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginBottom: '16px', lineHeight: '1.4' }}>
+              Ingresa el saldo total actual que tienes en tus ahorros. El sistema creará un movimiento de ajuste automáticamente.
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Nuevo Saldo</label>
+              <input 
+                type="text" inputMode="numeric"
+                value={formatInputAmount(savingsInput)} 
+                onChange={e => setSavingsInput(parseInputAmount(e.target.value))}
+                placeholder="$ 0"
+                style={{ fontSize: '1.5rem', fontWeight: '800', textAlign: 'center', color: 'var(--primary)' }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setIsSavingsModalOpen(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: 'white', border: 'none', cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  onAdjustSavings(parseFloat(savingsInput) || 0);
+                  setIsSavingsModalOpen(false);
+                }}
+                className="btn-primary" style={{ flex: 1.5, padding: '12px' }}>
+                Confirmar
+              </button>
             </div>
           </div>
         </div>
