@@ -111,11 +111,16 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
   };
 
   const activeBusiness = businesses.find(b => b.id === activeBusinessId);
-  const isFinca = useMemo(() => {
-    if (!activeBusiness) return false;
+  const bizType = useMemo(() => {
+    if (!activeBusiness) return 'other';
     const type = activeBusiness.type.toLowerCase();
-    return type.includes('finca') || type.includes('café') || type.includes('cafe') || type.includes('caficultura');
+    if (type.includes('finca') || type.includes('café') || type.includes('cafe') || type.includes('caficultura')) return 'coffee';
+    if (type.includes('ganadería') || type.includes('ganaderia') || type.includes('lechería') || type.includes('lecheria')) return 'livestock';
+    return 'other';
   }, [activeBusiness]);
+
+  const isFinca = bizType === 'coffee';
+  const isLivestock = bizType === 'livestock';
 
   const activeBizTxs = useMemo(() => transactions.filter(t => t.businessId === activeBusinessId), [transactions, activeBusinessId]);
   const activeWorkers = useMemo(() => (workers || []).filter(w => w.businessId === activeBusinessId), [workers, activeBusinessId]);
@@ -140,14 +145,14 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
           <div style={{ marginBottom: '16px' }}>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Tipo</label>
             <select value={newBizType} onChange={e => setNewBizType(e.target.value)}>
-              <option value="Finca Cafetera">Finca Cafetera</option>
+              <option value="Finca Cafetera">Finca Cafetera (Café)</option>
+              <option value="Ganadería">Ganadería (Leche/Queso/Carne)</option>
               <option value="Servicios">Servicios</option>
               <option value="Comercio">Comercio (Venta de productos)</option>
               <option value="Digital">Negocio Digital</option>
               <option value="Gastronomía">Gastronomía</option>
               <option value="Otro">Otro</option>
             </select>
-          </div>
           </div>
           <div style={{ marginBottom: '24px' }}>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Capital Inicial (Opcional)</label>
@@ -256,12 +261,26 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
               {/* Botones Rápidos para Finca Cafetera */}
               {isFinca && !isAddingTx && (
                 <div style={{ marginBottom: '24px' }}>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '8px', fontWeight: '600' }}>REGISTRO RÁPIDO</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '8px', fontWeight: '600' }}>REGISTRO RÁPIDO CAFÉ</p>
                   <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
                     <button onClick={() => {setTxType('income'); setTxDesc('Venta Café Pergamino'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(52,199,89,0.3)', background: 'rgba(52,199,89,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>+ Café Pergamino</button>
                     <button onClick={() => {setTxType('expense'); setTxDesc('Fertilizantes'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>- Fertilizantes</button>
                     <button onClick={() => {setTxType('expense'); setTxDesc('Agroquímicos'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>- Agroquímicos</button>
                     <button onClick={() => {setTxType('expense'); setTxDesc('Remesa / Mercado'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>- Remesa</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Botones Rápidos para Ganadería */}
+              {isLivestock && !isAddingTx && (
+                <div style={{ marginBottom: '24px' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '8px', fontWeight: '600' }}>REGISTRO RÁPIDO GANADERÍA</p>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
+                    <button onClick={() => {setTxType('income'); setTxDesc('Venta de Leche'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(52,199,89,0.3)', background: 'rgba(52,199,89,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>+ Venta Leche</button>
+                    <button onClick={() => {setTxType('income'); setTxDesc('Venta de Queso'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(52,199,89,0.3)', background: 'rgba(196,251,109,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>+ Venta Queso</button>
+                    <button onClick={() => {setTxType('expense'); setTxDesc('Concentrado / Purina'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>- Concentrado</button>
+                    <button onClick={() => {setTxType('expense'); setTxDesc('Sal y Suplementos'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>- Sal</button>
+                    <button onClick={() => {setTxType('expense'); setTxDesc('Vacunas / Medicamentos'); setIsAddingTx(true);}} style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: 'white', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>- Vacunas</button>
                   </div>
                 </div>
               )}
