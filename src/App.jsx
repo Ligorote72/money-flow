@@ -372,7 +372,7 @@ function AppContent() {
       }
     } catch (err) {
       console.error('Error al agregar banco:', err);
-      alert('Error al guardar el banco en la nube. Se mantuvo localmente.');
+      alert(`Error al guardar el banco en la nube: ${err.message || 'Error desconocido'}. Se ha mantenido localmente.`);
     }
   };
   const deleteBank = async (id) => {

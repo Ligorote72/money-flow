@@ -101,10 +101,19 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
     if (!payUnits) return;
     
     const units = parseFloat(payUnits);
-    const amount = units * worker.rate;
-    const desc = worker.type === 'recolector' 
-      ? `Nómina: ${worker.name} (${units} Kg)` 
-      : `Nómina: ${worker.name} (${units} días)`;
+    let amount = 0;
+    let desc = '';
+    
+    if (worker.type === 'recolector') {
+      amount = units * worker.rate;
+      desc = `Nómina: ${worker.name} (${units} Kg)`;
+    } else if (worker.type === 'recolector_arroba') {
+      amount = units * worker.rate;
+      desc = `Nómina: ${worker.name} (${units} @ Arrobas)`;
+    } else {
+      amount = units * worker.rate;
+      desc = `Nómina: ${worker.name} (${units} días)`;
+    }
       
     handleAddTx(null, desc, 'expense', amount);
     setPayWorkerId(null);
@@ -401,6 +410,7 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
                   <div style={{ marginBottom: '12px' }}>
                     <select value={workerType} onChange={e => setWorkerType(e.target.value)}>
                       <option value="recolector">Recolector (Pago por Kilo)</option>
+                      <option value="recolector_arroba">Recolector (Pago por Arroba @)</option>
                       <option value="jornal">Jornal (Pago por Día)</option>
                     </select>
                   </div>
@@ -422,7 +432,7 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
                         <div>
                           <p style={{ fontWeight: '700', fontSize: '1rem' }}>{w.name}</p>
                           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                            {w.type === 'recolector' ? '🧺 Recolector' : '⛏️ Jornal'} · {formatCurrency(w.rate)} / {w.type === 'recolector' ? 'Kg' : 'Día'}
+                            {w.type === 'recolector' ? '🧺 Recolector' : w.type === 'recolector_arroba' ? '📦 Recolector (@)' : '⛏️ Jornal'} · {formatCurrency(w.rate)} / {w.type === 'recolector' ? 'Kg' : w.type === 'recolector_arroba' ? '@' : 'Día'}
                           </p>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -439,7 +449,7 @@ const BusinessDashboard = ({ businesses, addBusiness, transactions, setTransacti
 
                       {payWorkerId === w.id && (
                         <form onSubmit={(e) => handlePayWorker(e, w)} className="animate-fade" style={{ display: 'flex', gap: '10px' }}>
-                          <input type="number" step="0.01" placeholder={w.type === 'recolector' ? "Kilos Recolectados" : "Días Trabajados"} value={payUnits} onChange={e => setPayUnits(e.target.value)} required style={{ margin: 0, flex: 1 }} />
+                          <input type="number" step="0.01" placeholder={w.type === 'recolector' ? "Kilos Recolectados" : w.type === 'recolector_arroba' ? "Arrobas (@) Recolectadas" : "Días Trabajados"} value={payUnits} onChange={e => setPayUnits(e.target.value)} required style={{ margin: 0, flex: 1 }} />
                           <button type="submit" style={{ padding: '0 16px', borderRadius: '12px', background: 'rgba(52,199,89,0.2)', color: 'var(--income)', border: 'none', fontWeight: '600' }}>
                             Confirmar
                           </button>
