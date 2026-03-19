@@ -277,6 +277,17 @@ function AppContent() {
     setActiveTab('home');
   };
 
+  const addBankTransaction = async (txData) => {
+    if (!session) return;
+    const finalTx = {
+      ...txData,
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      category: 'Otros'
+    };
+    await addTransaction(finalTx);
+  };
+
   const deleteTransaction = async (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este movimiento?')) {
       setTransactions(prev => prev.filter(t => t.id !== id));
@@ -726,6 +737,7 @@ function AppContent() {
           onAddBank={addBank}
           onDeleteBank={deleteBank}
           onAdjustSavings={adjustSavingsBalance}
+          onAddBankTransaction={addBankTransaction}
         />
       )}
       {/* Contenido */}
