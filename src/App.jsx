@@ -350,11 +350,29 @@ function AppContent() {
   const addPiggy    = (p) => setPiggyBanks(prev => [p, ...prev]);
   const deletePiggy = (id) => setPiggyBanks(prev => prev.filter(p => p.id !== id));
 
-  const addBank    = async (name) => {
+  const addBank = async (name) => {
     if (!session) return;
-    const { data } = await supabase.from('banks').insert({ name, user_id: session.user.id }).select();
-    if (data && data[0]) {
-      setBanks(prev => [...prev, { id: data[0].id, name: data[0].name }]);
+    
+    // Optimistic Update: Generar ID temporal para feedback inmediato
+    const tempId = 'temp_' + Date.now();
+    const newBank = { id: tempId, name };
+    setBanks(prev => [...prev, newBank]);
+
+    try {
+      const { data, error } = await supabase
+        .from('banks')
+        .insert({ name, user_id: session.user.id })
+        .select();
+
+      if (error) throw error;
+
+      if (data && data[0]) {
+        // Reemplazar ID temporal con el real de la DB
+        setBanks(prev => prev.map(b => b.id === tempId ? { id: data[0].id, name: data[0].name } : b));
+      }
+    } catch (err) {
+      console.error('Error al agregar banco:', err);
+      alert('Error al guardar el banco en la nube. Se mantuvo localmente.');
     }
   };
   const deleteBank = async (id) => {
