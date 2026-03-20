@@ -132,6 +132,15 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
     }
   }, [isAddingWorker, bizType]);
 
+  // Reset payment states when opening pay worker
+  useEffect(() => {
+    if (payWorkerId) {
+      setWorkerType('Recolectar');
+      setPayUnits('@');
+      setWorkerRate('');
+    }
+  }, [payWorkerId]);
+
   // 4. Handlers
   const handleAddBusiness = (e) => {
     e.preventDefault();
@@ -220,14 +229,17 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
 
   const handleAddWorker = (e) => {
     e.preventDefault();
-    if (!workerName.trim() || !workerRate) return;
+    if (!workerName.trim()) return;
     
+    // For coffee, we use business-wide rates, but we keep a dummy rate for compatibility or specialized cases
+    const rateValue = bizType === 'coffee' ? 0 : (parseFloat(workerRate) || 0);
+
     const newWorker = {
       id: Date.now().toString(),
       businessId: activeBusinessId,
       name: workerName,
       type: workerType,
-      rate: parseFloat(workerRate)
+      rate: rateValue
     };
     setWorkers(prev => [...prev, newWorker]);
     setIsAddingWorker(false);
@@ -448,78 +460,152 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
           {activeTab === 'workers' && (
             <div className="animate-fade">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Trabajadores</h3>
-                <button onClick={() => setIsAddingWorker(!isAddingWorker)} className="btn-primary" style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '0.9rem' }}>{isAddingWorker ? 'Cancelar' : '+ Añadir'}</button>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Gestión de Trabajadores</h3>
+                <button onClick={() => setIsAddingWorker(!isAddingWorker)} className="btn-primary" style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '0.9rem' }}>{isAddingWorker ? 'Cancelar' : '+ Nuevo Trabajador'}</button>
               </div>
+
+              {/* Configuración de Precios (Solo para Café) */}
+              {bizType === 'coffee' && (
+                <div style={{ background: 'rgba(var(--primary-rgb), 0.05)', padding: '16px', borderRadius: '20px', marginBottom: '20px', border: '1px solid rgba(var(--primary-rgb), 0.1)' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: '700', marginBottom: '12px' }}>⚙️ CONFIGURACIÓN DE PRECIOS</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>Precio Día (Pepeo)</label>
+                      <input type="text" inputMode="numeric" placeholder="$ 50.000" 
+                        value={formatInputAmount(activeBusiness.dailyRate || '')} 
+                        onChange={e => updateBusiness(activeBusinessId, { dailyRate: parseInputAmount(e.target.value) })} 
+                        style={{ fontSize: '0.9rem', padding: '10px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>Precio Arroba (@)</label>
+                      <input type="text" inputMode="numeric" placeholder="$ 15.000" 
+                        value={formatInputAmount(activeBusiness.arrobaRate || '')} 
+                        onChange={e => updateBusiness(activeBusinessId, { arrobaRate: parseInputAmount(e.target.value) })} 
+                        style={{ fontSize: '0.9rem', padding: '10px' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isAddingWorker && (
-                <form onSubmit={handleAddWorker} style={{ background: 'var(--surface-color)', padding: '16px', borderRadius: '20px', marginBottom: '20px' }}>
-                  <input type="text" placeholder="Nombre" value={workerName} onChange={e => setWorkerName(e.target.value)} required />
-                  <select value={workerType} onChange={e => setWorkerType(e.target.value)} style={{ marginTop: '12px' }}>
+                <form onSubmit={handleAddWorker} className="card animate-fade" style={{ padding: '16px', marginBottom: '20px' }}>
+                  <input type="text" placeholder="Nombre completo" value={workerName} onChange={e => setWorkerName(e.target.value)} required />
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginTop: '12px', marginBottom: '8px' }}>Tipo de contrato predeterminado</label>
+                  <select value={workerType} onChange={e => setWorkerType(e.target.value)}>
                     {bizType === 'coffee' ? (
                       <>
-                        <option value="recolector">Kg Recolectado</option>
-                        <option value="recolector_arroba">@ Arroba</option>
-                        <option value="jornal">Día (Jornal)</option>
-                      </>
-                    ) : bizType === 'livestock' ? (
-                      <>
-                        <option value="jornal">Día (Jornal)</option>
-                        <option value="tarea">Tarea / Mantenimiento</option>
+                        <option value="recolector_arroba">Cogedor de Café (Arroba)</option>
+                        <option value="jornal">Jornalero (Día)</option>
+                        <option value="otro">Admin / Otro</option>
                       </>
                     ) : (
                       <>
                         <option value="jornal">Día (Jornal)</option>
-                        <option value="comision">Por Ventas / Comisión</option>
-                        <option value="tarea">Tarea / Proyecto</option>
+                        <option value="tarea">Por Tarea</option>
                       </>
                     )}
                   </select>
-                  <input type="text" inputMode="numeric" placeholder="Precio ($)" value={formatInputAmount(workerRate)} onChange={e => setWorkerRate(parseInputAmount(e.target.value))} required style={{ marginTop: '12px' }} />
-                  <button type="submit" className="btn-primary" style={{ width: '100%', padding: '12px', marginTop: '16px' }}>Guardar</button>
+                  <button type="submit" className="btn-primary" style={{ width: '100%', padding: '12px', marginTop: '16px' }}>Guardar Trabajador</button>
                 </form>
               )}
-              {activeWorkers.map(w => (
-                <div key={w.id} style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '16px', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <p style={{ fontWeight: '700' }}>{w.name}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{w.type} · {formatCurrency(w.rate)}</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => setPayWorkerId(payWorkerId === w.id ? null : w.id)} style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--primary)', color: 'black', fontWeight: '600' }}>Pagar</button>
-                      <button onClick={() => { if(window.confirm('¿Eliminar?')) setWorkers(prev => prev.filter(x => x.id !== w.id)); }} style={{ color: 'var(--expense)', background: 'none', border: 'none' }}>×</button>
-                    </div>
-                  </div>
-                  {payWorkerId === w.id && (
-                    <div className="animate-fade" style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', marginTop: '12px' }}>
-                      <form onSubmit={(e) => handlePayWorker(e, w)} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>
-                            Cant. {
-                              w.type === 'recolector' ? 'Kg' : 
-                              w.type === 'recolector_arroba' ? '@ Arrobas' : 
-                              w.type === 'jornal' ? 'Días' : 
-                              w.type === 'comision' ? 'Ventas' : 'Tareas'
-                            }
-                          </label>
-                          <input type="number" step="0.01" placeholder="Ej: 10" value={payUnits} onChange={e => setPayUnits(e.target.value)} required style={{ width: '100%' }} />
-                        </div>
-                        <button type="submit" className="btn-primary" style={{ padding: '0 16px', height: '42px' }}>Pagar</button>
-                      </form>
-                      {payUnits && parseFloat(payUnits) > 0 && (
-                        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                            {payUnits} × {formatCurrency(w.rate)}
-                          </span>
-                          <span style={{ fontWeight: '700', color: 'var(--expense)', fontSize: '1rem' }}>
-                            Total: {formatCurrency(parseFloat(payUnits) * w.rate)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+
+              {activeWorkers.length === 0 && !isAddingWorker && (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-dim)' }}>
+                  <p>Aún no tienes trabajadores registrados.</p>
                 </div>
-              ))}
+              )}
+
+              {activeWorkers.map(w => {
+                const isPaying = payWorkerId === w.id;
+                // Local state for specialized payment
+                return (
+                  <div key={w.id} style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '20px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>👷</div>
+                        <div>
+                          <p style={{ fontWeight: '700', fontSize: '1rem' }}>{w.name}</p>
+                          <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{w.type === 'recolector_arroba' ? 'Cogedor (@)' : w.type === 'jornal' ? 'Jornalero' : 'Otro'}</p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => setPayWorkerId(isPaying ? null : w.id)} 
+                          style={{ padding: '8px 16px', borderRadius: '10px', background: isPaying ? 'rgba(255,255,255,0.1)' : 'var(--primary)', color: isPaying ? 'white' : 'black', fontWeight: '700', fontSize: '0.85rem' }}>
+                          {isPaying ? 'Cerrar' : 'Pagar'}
+                        </button>
+                        <button onClick={() => { if(window.confirm(`¿Eliminar a ${w.name}?`)) setWorkers(prev => prev.filter(x => x.id !== w.id)); }} style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.3)', padding: '4px' }}>🗑️</button>
+                      </div>
+                    </div>
+
+                    {isPaying && (
+                      <div className="animate-fade" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginBottom: '8px' }}>Selecciona la Actividad</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                            {['Guadañar', 'Abonar', 'Fumigar', 'Recolectar'].map(act => (
+                              <button key={act} 
+                                onClick={() => setWorkerType(act)} // Using workerType temporarily as activity selector state
+                                style={{ 
+                                  padding: '10px', borderRadius: '10px', border: '1px solid',
+                                  background: workerType === act ? 'rgba(var(--primary-rgb), 0.2)' : 'transparent',
+                                  borderColor: workerType === act ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                                  color: workerType === act ? 'var(--primary)' : 'white',
+                                  fontSize: '0.8rem', fontWeight: '600'
+                                }}>{act}</button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {workerType === 'Recolectar' && (
+                          <div style={{ marginBottom: '16px' }}>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginBottom: '8px' }}>Modo de Recolección</label>
+                            <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px' }}>
+                              <button onClick={() => setPayUnits('dia')} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: 'none', background: !payUnits.includes('@') ? 'rgba(255,255,255,0.1)' : 'transparent', color: 'white', fontSize: '0.75rem', fontWeight: '600' }}>Pepeo (Día)</button>
+                              <button onClick={() => setPayUnits('@')} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: 'none', background: payUnits.includes('@') ? 'rgba(255,255,255,0.1)' : 'transparent', color: 'white', fontSize: '0.75rem', fontWeight: '600' }}>Arrobeo (@)</button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>
+                              {(workerType === 'Recolectar' && payUnits.includes('@')) ? 'Cantidad de Arrobas' : 'Días Trabajados'}
+                            </label>
+                            <input type="number" step="0.5" placeholder="0" 
+                              onChange={e => setWorkerRate(e.target.value)} // Using workerRate temp for quantity
+                              style={{ width: '100%', fontSize: '1.1rem', fontWeight: '700' }} />
+                          </div>
+                          <div style={{ flex: 1, textAlign: 'right' }}>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginBottom: '4px' }}>Total a Pagar</p>
+                            <p style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--expense)' }}>
+                              {formatCurrency(
+                                (parseFloat(workerRate) || 0) * 
+                                ((workerType === 'Recolectar' && payUnits.includes('@')) ? (activeBusiness.arrobaRate || 0) : (activeBusiness.dailyRate || 0))
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => {
+                            const qty = parseFloat(workerRate) || 0;
+                            const rate = (workerType === 'Recolectar' && payUnits.includes('@')) ? (activeBusiness.arrobaRate || 0) : (activeBusiness.dailyRate || 0);
+                            const amount = qty * rate;
+                            const unitLabel = (workerType === 'Recolectar' && payUnits.includes('@')) ? '@' : 'Días';
+                            const desc = `${workerType}: ${w.name} (${qty} ${unitLabel})`;
+                            handleAddTx(null, desc, 'expense', amount);
+                            setPayWorkerId(null);
+                            setWorkerRate('');
+                            setPayUnits('');
+                          }}
+                          className="btn-primary" style={{ width: '100%', marginTop: '16px', padding: '14px' }}>
+                          Confirmar Pago
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </>
