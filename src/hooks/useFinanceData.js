@@ -65,19 +65,35 @@ export function useFinanceData() {
   useEffect(() => { localStorage.setItem('money-flow-business-txs', JSON.stringify(businessTransactions)); }, [businessTransactions]);
   useEffect(() => { localStorage.setItem('money-flow-business-workers', JSON.stringify(businessWorkers)); }, [businessWorkers]);
 
-  // Auth session
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // Set a timeout to stop loading after 5 seconds in case getSession hangs
+    const loadingTimeout = setTimeout(() => {
+      console.warn('Supabase session fetch timed out, proceeding without session.');
       setLoading(false);
-    });
+    }, 5000);
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        clearTimeout(loadingTimeout);
+        setSession(session);
+        setLoading(false);
+      })
+      .catch((error) => {
+        clearTimeout(loadingTimeout);
+        console.error('Error getting Supabase session:', error);
+        setLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
+
 
   // Supabase Sync
   useEffect(() => {
