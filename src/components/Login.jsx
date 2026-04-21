@@ -73,9 +73,9 @@ const Login = () => {
           onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
           <img 
-            src="https://www.google.com/favicon.ico" 
+            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
             alt="Google" 
-            style={{ width: '20px', height: '20px' }} 
+            style={{ width: '18px', height: '18px' }} 
           />
           Continuar con Google
         </button>
