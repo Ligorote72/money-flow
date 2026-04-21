@@ -71,6 +71,7 @@ function AppContent() {
     addDebt, deleteDebt, updateDebt, toggleDebtPaid,
     addSubscription, deleteSubscription, updateSubscription,
     addPiggyBank, deletePiggyBank, updatePiggyBank,
+    partialPaymentDebt,
     addBank,
     deleteBank,
   } = useFinanceData();

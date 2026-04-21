@@ -77,6 +77,12 @@ export const fetchAllFromSupabase = async (userId) => {
   const { data: dbDebts } = await supabase.from('debts').select('*').eq('user_id', userId);
 
   // Convertir formato de Supabase al formato que espera la App
+  const mappedTransactions = (transactions || []).map(tx => ({
+    ...tx,
+    accountId: tx.account_id,
+    toAccountId: tx.to_account_id
+  }));
+
   const banks = [
     { id: 'general', name: 'Banco Principal' },
     ...(dbBanks || []).map(b => ({ id: b.id, name: b.name }))
@@ -108,7 +114,7 @@ export const fetchAllFromSupabase = async (userId) => {
   }));
 
   return { 
-    transactions: transactions || [], 
+    transactions: mappedTransactions, 
     banks, 
     goals,
     debts,
@@ -134,10 +140,18 @@ export const syncTransaction = async (tx, userId) => {
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tx.id);
 
   if (isUUID) {
-    const { data } = await supabase.from('transactions').update(payload).eq('id', tx.id).select();
+    const { data, error } = await supabase.from('transactions').update(payload).eq('id', tx.id).select();
+    if (error) {
+      console.error('Error updating transaction in Supabase:', error.message);
+      return null;
+    }
     return data?.[0];
   } else {
-    const { data } = await supabase.from('transactions').insert(payload).select();
+    const { data, error } = await supabase.from('transactions').insert(payload).select();
+    if (error) {
+      console.error('Error inserting transaction in Supabase:', error.message);
+      return null;
+    }
     return data?.[0];
   }
 };
