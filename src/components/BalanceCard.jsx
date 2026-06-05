@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
 
-const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBalances = {}, hideBalance = false, username, totalPiggySavings = 0, banks = [], onAddBank, onDeleteBank, onAdjustSavings }) => {
+const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBalances = {}, hideBalance = false, username, totalPiggySavings = 0, banks = [], onAddBank, onDeleteBank, onAdjustSavings, onAddBankTransaction }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
   const [newBankName, setNewBankName] = useState('');
@@ -13,7 +13,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
   const [bankTxType, setBankTxType] = useState('expense');
   const [bankTxDesc, setBankTxDesc] = useState('');
 
-  const mask = (val) => hideBalance ? '••••••' : formatCurrency(val);
+  const mask = (val) => hideBalance ? 'â€¢â€¢â€¢â€¢â€¢â€¢' : formatCurrency(val);
 
   return (
     <div className="card animate-fade">
@@ -66,7 +66,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
             <div>
               <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', position: 'relative' }}>
                 {acc.label}
-                {acc.id === 'bank' && <span style={{ fontSize: '0.5rem', marginLeft: '4px', opacity: 0.5 }}>▼</span>}
+                {acc.id === 'bank' && <span style={{ fontSize: '0.5rem', marginLeft: '4px', opacity: 0.5 }}>â–¼</span>}
               </p>
               <p style={{ fontSize: '0.8rem', fontWeight: '600', color: accountBalances[acc.id] < 0 ? 'var(--expense)' : 'white' }}>
                 {mask(accountBalances[acc.id])}
@@ -80,7 +80,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
           background: 'rgba(var(--primary-rgb), 0.1)', padding: '8px 10px', borderRadius: '12px',
           border: '1px solid rgba(var(--primary-rgb), 0.15)'
         }}>
-          <span style={{ fontSize: '1rem' }}>💰</span>
+          <span style={{ fontSize: '1rem' }}>ðŸ’°</span>
           <div>
             <p style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: '600' }}>Cochinitos</p>
             <p style={{ fontSize: '0.8rem', fontWeight: '700', color: 'white' }}>
@@ -103,10 +103,10 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>
-                {selectedBankId ? `Movimiento en ${banks.find(b => b.id === selectedBankId)?.name}` : 'Mis Bancos 🏛️'}
+                {selectedBankId ? `Movimiento en ${banks.find(b => b.id === selectedBankId)?.name}` : 'Mis Bancos ðŸ›ï¸'}
               </h3>
               <button onClick={() => { if(selectedBankId) setSelectedBankId(null); else setIsModalOpen(false); }} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>
-                {selectedBankId ? '⬅️' : '×'}
+                {selectedBankId ? 'â¬…ï¸' : 'Ã—'}
               </button>
             </div>
 
@@ -125,7 +125,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                         <p style={{ fontWeight: '600', fontSize: '0.95rem' }}>{b.name}</p>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Saldo: {mask(accountBalances.bankDetails?.[b.id] || 0)}</p>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); onDeleteBank(b.id); }} style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.5)', cursor: 'pointer', padding: '8px' }}>🗑️</button>
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteBank(b.id); }} style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.5)', cursor: 'pointer', padding: '8px' }}>ðŸ—‘ï¸</button>
                     </div>
                   ))}
                 </div>
@@ -146,20 +146,20 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                       }}
                       disabled={!newBankName.trim()}
                       className="btn-primary" style={{ padding: '0 16px', whiteSpace: 'nowrap' }}
-                    >Añadir</button>
+                    >AÃ±adir</button>
                   </div>
                 </div>
               </>
             ) : (
               <div className="animate-fade">
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                  <button onClick={() => setBankTxType('income')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid', borderColor: bankTxType === 'income' ? 'var(--income)' : 'rgba(255,255,255,0.1)', background: bankTxType === 'income' ? 'rgba(52,199,89,0.15)' : 'transparent', color: bankTxType === 'income' ? 'var(--income)' : 'var(--text-dim)', fontWeight: '700' }}>↑ Ingreso</button>
-                  <button onClick={() => setBankTxType('expense')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid', borderColor: bankTxType === 'expense' ? 'var(--expense)' : 'rgba(255,255,255,0.1)', background: bankTxType === 'expense' ? 'rgba(255,59,48,0.15)' : 'transparent', color: bankTxType === 'expense' ? 'var(--expense)' : 'var(--text-dim)', fontWeight: '700' }}>↓ Egreso</button>
+                  <button onClick={() => setBankTxType('income')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid', borderColor: bankTxType === 'income' ? 'var(--income)' : 'rgba(255,255,255,0.1)', background: bankTxType === 'income' ? 'rgba(52,199,89,0.15)' : 'transparent', color: bankTxType === 'income' ? 'var(--income)' : 'var(--text-dim)', fontWeight: '700' }}>â†‘ Ingreso</button>
+                  <button onClick={() => setBankTxType('expense')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid', borderColor: bankTxType === 'expense' ? 'var(--expense)' : 'rgba(255,255,255,0.1)', background: bankTxType === 'expense' ? 'rgba(255,59,48,0.15)' : 'transparent', color: bankTxType === 'expense' ? 'var(--expense)' : 'var(--text-dim)', fontWeight: '700' }}>â†“ Egreso</button>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>Descripción</label>
-                  <input type="text" value={bankTxDesc} onChange={e => setBankTxDesc(e.target.value)} placeholder="Ej: Depósito, Pago de cliente..." />
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>DescripciÃ³n</label>
+                  <input type="text" value={bankTxDesc} onChange={e => setBankTxDesc(e.target.value)} placeholder="Ej: DepÃ³sito, Pago de cliente..." />
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
@@ -169,11 +169,11 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
 
                 <button 
                   onClick={() => {
-                    if (bankTxAmount && bankTxDesc) {
+                    if (bankTxAmount) {
                       onAddBankTransaction({
                         amount: parseFloat(bankTxAmount),
                         type: bankTxType,
-                        description: bankTxDesc,
+                        description: bankTxDesc.trim() || (bankTxType === 'income' ? 'Ingreso' : 'Egreso'),
                         accountId: selectedBankId
                       });
                       setBankTxAmount('');
@@ -182,8 +182,8 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                       setIsModalOpen(false);
                     }
                   }}
-                  disabled={!bankTxAmount || !bankTxDesc}
-                  className="btn-primary" style={{ width: '100%', padding: '14px' }}>
+                  disabled={!bankTxAmount}
+                  className="btn-primary" style={{ width: '100%', padding: '14px', opacity: !bankTxAmount ? 0.5 : 1 }}>
                   Guardar Movimiento
                 </button>
               </div>
@@ -200,12 +200,12 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '360px', background: 'var(--bg-card)', border: '1px solid rgba(var(--primary-rgb), 0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>💰 Ajustar Ahorros</h3>
-              <button onClick={() => setIsSavingsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>ðŸ’° Ajustar Ahorros</h3>
+              <button onClick={() => setIsSavingsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>Ã—</button>
             </div>
 
             <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginBottom: '16px', lineHeight: '1.4' }}>
-              Ingresa el saldo total actual que tienes en tus ahorros. El sistema creará un movimiento de ajuste automáticamente.
+              Ingresa el saldo total actual que tienes en tus ahorros. El sistema crearÃ¡ un movimiento de ajuste automÃ¡ticamente.
             </p>
 
             <div style={{ marginBottom: '24px' }}>
