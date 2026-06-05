@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings, THEMES } from '../context/SettingsContext';
 import { hasLocalPin, savePinLocally, clearLocalPin, verifyPin } from '../utils/crypto';
+import { isBiometricsSupported, hasLocalBiometrics, registerBiometrics, clearLocalBiometrics } from '../utils/biometrics';
 
 const SettingsTab = () => {
   const { username, setUsername, darkMode, setDarkMode, themeId, setThemeId } = useSettings();
@@ -8,6 +9,7 @@ const SettingsTab = () => {
   
   // PIN Estado
   const [isPinEnabled, setIsPinEnabled] = useState(hasLocalPin());
+  const [isBioEnabled, setIsBioEnabled] = useState(hasLocalBiometrics());
   const [showPinModal, setShowPinModal] = useState(false);
   const [modalMode, setModalMode] = useState(''); // 'setup', 'confirm', 'disable'
   const [pinInput, setPinInput] = useState('');
@@ -58,6 +60,20 @@ const SettingsTab = () => {
       } else {
         setErrorInput('PIN incorrecto');
         setPinInput('');
+      }
+    }
+  };
+
+  const handleToggleBio = async () => {
+    if (isBioEnabled) {
+      clearLocalBiometrics();
+      setIsBioEnabled(false);
+    } else {
+      const success = await registerBiometrics();
+      if (success) {
+        setIsBioEnabled(true);
+      } else {
+        alert('No se pudo configurar la huella digital. Asegúrate de que tu dispositivo tiene soporte y permisos habilitados.');
       }
     }
   };
@@ -116,6 +132,37 @@ const SettingsTab = () => {
           }} />
         </button>
       </div>
+
+      {isBiometricsSupported() && (
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '14px 0', borderTop: '1px solid rgba(255,255,255,0.07)', marginBottom: '4px'
+        }}>
+          <div>
+            <p style={{ fontWeight: '600', fontSize: '0.9rem' }}>Ingreso con Huella / FaceID</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+              {isBioEnabled ? '👆 Biometría activada' : '👆 Biometría desactivada'}
+            </p>
+          </div>
+          <button
+            onClick={handleToggleBio}
+            style={{
+              width: '52px', height: '30px', borderRadius: '15px', border: 'none',
+              background: isBioEnabled ? 'var(--income)' : 'rgba(120,120,128,0.32)',
+              cursor: 'pointer', position: 'relative', transition: 'background 0.3s ease',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: '3px',
+              left: isBioEnabled ? '25px' : '3px',
+              width: '24px', height: '24px', borderRadius: '50%',
+              background: 'white', transition: 'left 0.3s ease',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+            }} />
+          </button>
+        </div>
+      )}
 
       {/* Modo oscuro/claro */}
       <div style={{

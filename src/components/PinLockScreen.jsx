@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { verifyPin, clearLocalPin } from '../utils/crypto';
-import { LogOut, Delete } from 'lucide-react';
+import { isBiometricsSupported, hasLocalBiometrics, verifyBiometrics } from '../utils/biometrics';
+import { LogOut, Delete, Fingerprint } from 'lucide-react';
 
 export default function PinLockScreen({ onUnlock, onLogout }) {
   const [pin, setPin] = useState('');
@@ -11,6 +12,22 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
       handleVerify(pin);
     }
   }, [pin]);
+
+  useEffect(() => {
+    if (hasLocalBiometrics()) {
+      handleBiometrics();
+    }
+  }, []);
+
+  const handleBiometrics = async () => {
+    const success = await verifyBiometrics();
+    if (success) {
+      onUnlock();
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 500);
+    }
+  };
 
   const handleVerify = async (currentPin) => {
     const storedHash = localStorage.getItem('moneyflow_pin_hash');
@@ -141,17 +158,33 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
       </div>
 
       {/* Footer actions */}
-      <button 
-        onClick={handleForgotPin}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '8px', marginTop: 'auto',
-          backgroundColor: 'transparent', border: 'none', color: 'var(--text-dim)',
-          padding: '16px', fontSize: '0.85rem', cursor: 'pointer'
-        }}
-      >
-        <LogOut size={16} />
-        <span>Cerrar Sesión</span>
-      </button>
+      <div style={{ display: 'flex', gap: '32px', marginTop: 'auto', padding: '16px' }}>
+        {hasLocalBiometrics() && (
+          <button 
+            onClick={handleBiometrics}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+              backgroundColor: 'transparent', border: 'none', color: 'var(--primary)',
+              cursor: 'pointer', opacity: 0.9
+            }}
+          >
+            <Fingerprint size={32} />
+            <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>Huella</span>
+          </button>
+        )}
+
+        <button 
+          onClick={handleForgotPin}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+            backgroundColor: 'transparent', border: 'none', color: 'var(--text-dim)',
+            cursor: 'pointer'
+          }}
+        >
+          <LogOut size={28} />
+          <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>Cerrar Sesión</span>
+        </button>
+      </div>
     </div>
   );
 }
