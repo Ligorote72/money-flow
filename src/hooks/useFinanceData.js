@@ -105,14 +105,22 @@ export function useFinanceData() {
         await migrateToSupabase(localData, session.user.id);
         const dbData = await fetchAllFromSupabase(session.user.id);
         
-        if (dbData.transactions.length > 0 || dbData.banks.length > 1) {
+        if (dbData.transactions && dbData.transactions.length > 0) {
           setTransactions(dbData.transactions);
-          setBanks(dbData.banks);
-          setGoals(dbData.goals);
-          setDebts(dbData.debts);
-          setSubscriptions(dbData.subscriptions);
-          console.log('Datos de usuario sincronizados correctamente.');
         }
+        if (dbData.banks && dbData.banks.length > 1) {
+          setBanks(dbData.banks);
+        }
+        if (dbData.debts && dbData.debts.length > 0) {
+          setDebts(dbData.debts);
+        }
+        if (dbData.subscriptions && dbData.subscriptions.length > 0) {
+          setSubscriptions(dbData.subscriptions);
+        }
+        if (dbData.goals && (dbData.goals.income > 0 || dbData.goals.expense > 0)) {
+          setGoals(dbData.goals);
+        }
+        console.log('Datos de usuario sincronizados correctamente.');
       } catch (err) {
         console.error('Error sincronizando datos:', err);
       }
