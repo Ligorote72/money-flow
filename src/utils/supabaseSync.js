@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Migra los datos de localStorage a Supabase si la base de datos estÃ¡ vacÃ­a.
+ * Migra los datos de localStorage a Supabase si la base de datos está vacía.
  */
 export const migrateToSupabase = async (localData, userId) => {
   const { transactions, banks, goals, subscriptions, debts, piggyBanks } = localData;

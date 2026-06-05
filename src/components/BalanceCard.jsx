@@ -80,7 +80,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
           background: 'rgba(var(--primary-rgb), 0.1)', padding: '8px 10px', borderRadius: '12px',
           border: '1px solid rgba(var(--primary-rgb), 0.15)'
         }}>
-          <span style={{ fontSize: '1rem' }}>ðŸ’°</span>
+          <span style={{ fontSize: '1rem' }}>💰</span>
           <div>
             <p style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: '600' }}>Cochinitos</p>
             <p style={{ fontSize: '0.8rem', fontWeight: '700', color: 'white' }}>
@@ -103,10 +103,10 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>
-                {selectedBankId ? `Movimiento en ${banks.find(b => b.id === selectedBankId)?.name}` : 'Mis Bancos ðŸ›ï¸'}
+                {selectedBankId ? `Movimiento en ${banks.find(b => b.id === selectedBankId)?.name}` : 'Mis Bancos 🏛️'}
               </h3>
               <button onClick={() => { if(selectedBankId) setSelectedBankId(null); else setIsModalOpen(false); }} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>
-                {selectedBankId ? 'â¬…ï¸' : 'Ã—'}
+                {selectedBankId ? '⬅️' : '×'}
               </button>
             </div>
 
@@ -125,7 +125,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                         <p style={{ fontWeight: '600', fontSize: '0.95rem' }}>{b.name}</p>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Saldo: {mask(accountBalances.bankDetails?.[b.id] || 0)}</p>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); onDeleteBank(b.id); }} style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.5)', cursor: 'pointer', padding: '8px' }}>ðŸ—‘ï¸</button>
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteBank(b.id); }} style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.5)', cursor: 'pointer', padding: '8px' }}>🗑️</button>
                     </div>
                   ))}
                 </div>
@@ -146,7 +146,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                       }}
                       disabled={!newBankName.trim()}
                       className="btn-primary" style={{ padding: '0 16px', whiteSpace: 'nowrap' }}
-                    >AÃ±adir</button>
+                    >Añadir</button>
                   </div>
                 </div>
               </>
@@ -158,8 +158,8 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>DescripciÃ³n</label>
-                  <input type="text" value={bankTxDesc} onChange={e => setBankTxDesc(e.target.value)} placeholder="Ej: DepÃ³sito, Pago de cliente..." />
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>Descripción</label>
+                  <input type="text" value={bankTxDesc} onChange={e => setBankTxDesc(e.target.value)} placeholder="Ej: Depósito, Pago de cliente..." />
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
@@ -200,12 +200,12 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '360px', background: 'var(--bg-card)', border: '1px solid rgba(var(--primary-rgb), 0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>ðŸ’° Ajustar Ahorros</h3>
-              <button onClick={() => setIsSavingsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>Ã—</button>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>💰 Ajustar Ahorros</h3>
+              <button onClick={() => setIsSavingsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
             </div>
 
             <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginBottom: '16px', lineHeight: '1.4' }}>
-              Ingresa el saldo total actual que tienes en tus ahorros. El sistema crearÃ¡ un movimiento de ajuste automÃ¡ticamente.
+              Ingresa el saldo total actual que tienes en tus ahorros. El sistema creará un movimiento de ajuste automáticamente.
             </p>
 
             <div style={{ marginBottom: '24px' }}>
