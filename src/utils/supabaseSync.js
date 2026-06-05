@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Migra los datos de localStorage a Supabase si la base de datos está vacía.
+ * Migra los datos de localStorage a Supabase si la base de datos estÃ¡ vacÃ­a.
  */
 export const migrateToSupabase = async (localData, userId) => {
   const { transactions, banks, goals, subscriptions, debts, piggyBanks } = localData;
@@ -23,8 +23,8 @@ export const migrateToSupabase = async (localData, userId) => {
     category: tx.category,
     type: tx.type,
     date: tx.date,
-    account_id: String(tx.accountId),
-    to_account_id: tx.toAccountId ? String(tx.toAccountId) : null,
+    account_id: tx.accountId || null,
+    to_account_id: tx.toAccountId || null,
     user_id: userId
   }));
 
@@ -132,8 +132,8 @@ export const syncTransaction = async (tx, userId) => {
     category: tx.category,
     type: tx.type,
     date: tx.date,
-    account_id: String(tx.accountId),
-    to_account_id: tx.toAccountId ? String(tx.toAccountId) : null,
+    account_id: tx.accountId || null,
+    to_account_id: tx.toAccountId || null,
     user_id: userId
   };
 
