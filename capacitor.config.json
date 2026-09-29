@@ -1,0 +1,14 @@
+{
+  "appId": "com.moneyflow.app",
+  "appName": "MoneyFlow",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#0d1117"
+    }
+  }
+}
