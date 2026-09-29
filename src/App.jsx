@@ -20,17 +20,21 @@ import BusinessDashboard from './components/BusinessDashboard';
 import { hasLocalPin } from './utils/crypto';
 import { useFinanceData } from './hooks/useFinanceData';
 import { ToastProvider } from './components/ui/Toast';
+import { 
+  Home, 
+  PieChart, 
+  Plus, 
+  Coffee, 
+  SlidersHorizontal, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  ReceiptText 
+} from 'lucide-react';
 
 const ACCOUNTS = [
   { id: 'cash',    label: 'Efectivo',   icon: '💵', color: '#34C759' },
   { id: 'bank',    label: 'Banco',      icon: '🏛️', color: '#007AFF' },
   { id: 'savings', label: 'Ahorros',    icon: '🐷', color: '#FF2D55' },
-];
-
-const NAV_TABS = [
-  { id: 'home',     label: 'Resumen',    icon: '🏠' },
-  { id: 'analysis', label: 'Reportes',   icon: '📊' },
-  { id: 'varios',   label: 'Más',        icon: '🍱' },
 ];
 
 function AppContent() {
@@ -280,14 +284,69 @@ function AppContent() {
       </header>
 
       {activeTab === 'home' && (
-        <BalanceCard 
-          totalBalance={accountBalances.cash + accountBalances.bank + totalPiggySavings} 
-          income={totalIncome} expenses={totalExpenses} 
-          hideBalance={hideBalance} accountBalances={accountBalances} 
-          accounts={ACCOUNTS} username={username} totalPiggySavings={totalPiggySavings} 
-          banks={banks} onAddBank={addBank} onDeleteBank={deleteBank} 
-          onAdjustSavings={adjustSavingsBalance} onAddBankTransaction={addBankTransaction}
-        />
+        <>
+          <BalanceCard 
+            totalBalance={accountBalances.cash + accountBalances.bank + totalPiggySavings} 
+            income={totalIncome} expenses={totalExpenses} 
+            hideBalance={hideBalance} accountBalances={accountBalances} 
+            accounts={ACCOUNTS} username={username} totalPiggySavings={totalPiggySavings} 
+            banks={banks} onAddBank={addBank} onDeleteBank={deleteBank} 
+            onAdjustSavings={adjustSavingsBalance} onAddBankTransaction={addBankTransaction}
+          />
+
+          {/* Quick Action Bar (Acciones Rápidas 1-Toque) */}
+          <div className="quick-actions-bar animate-fade">
+            <button 
+              className="quick-action-btn"
+              onClick={() => setActiveTab('add_modal')}
+              title="Registrar Ingreso"
+            >
+              <div className="quick-action-icon" style={{ background: 'rgba(52, 199, 89, 0.15)', color: '#34c759' }}>
+                <ArrowDownLeft size={20} />
+              </div>
+              <span className="quick-action-label">+ Ingreso</span>
+            </button>
+
+            <button 
+              className="quick-action-btn"
+              onClick={() => setActiveTab('add_modal')}
+              title="Registrar Gasto"
+            >
+              <div className="quick-action-icon" style={{ background: 'rgba(255, 59, 48, 0.15)', color: '#ff3b30' }}>
+                <ArrowUpRight size={20} />
+              </div>
+              <span className="quick-action-label">- Gasto</span>
+            </button>
+
+            <button 
+              className="quick-action-btn"
+              onClick={() => {
+                setActiveTab('varios');
+                setVariosTab('minegocio');
+              }}
+              title="Cosecha y Finca Cafetera"
+            >
+              <div className="quick-action-icon" style={{ background: 'rgba(196, 251, 109, 0.15)', color: '#c4fb6d' }}>
+                <Coffee size={20} />
+              </div>
+              <span className="quick-action-label">Cosecha @</span>
+            </button>
+
+            <button 
+              className="quick-action-btn"
+              onClick={() => {
+                setActiveTab('varios');
+                setVariosTab('minegocio');
+              }}
+              title="Recibos y Liquidación WhatsApp"
+            >
+              <div className="quick-action-icon" style={{ background: 'rgba(0, 122, 255, 0.15)', color: '#007aff' }}>
+                <ReceiptText size={20} />
+              </div>
+              <span className="quick-action-label">Recibos</span>
+            </button>
+          </div>
+        </>
       )}
 
       <main className="app-main">
@@ -404,8 +463,6 @@ function AppContent() {
         )}
       </main>
 
-      {activeTab === 'home' && <button className="fab" onClick={() => setActiveTab('add_modal')}>+</button>}
-
       {(activeTab === 'add_modal' || editingTransaction) && (
         <div className="modal-overlay">
           <div className="modal-container">
@@ -418,14 +475,65 @@ function AppContent() {
         </div>
       )}
 
-      <nav className="bottom-nav">
-        {NAV_TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={activeTab === tab.id ? 'active' : ''}>
-            <span className="icon">{tab.icon}</span>
-            <span className="label">{tab.label}</span>
+      {/* Modern Floating Island Bottom Nav */}
+      <div className="floating-dock-container">
+        <nav className="floating-dock">
+          {/* Tab 1: Inicio */}
+          <button 
+            onClick={() => setActiveTab('home')} 
+            className={`dock-item ${activeTab === 'home' ? 'active' : ''}`}
+            title="Inicio"
+          >
+            <Home size={22} className="dock-icon" />
+            <span className="dock-label">Inicio</span>
           </button>
-        ))}
-      </nav>
+
+          {/* Tab 2: Reportes */}
+          <button 
+            onClick={() => setActiveTab('analysis')} 
+            className={`dock-item ${activeTab === 'analysis' ? 'active' : ''}`}
+            title="Reportes"
+          >
+            <PieChart size={22} className="dock-icon" />
+            <span className="dock-label">Reportes</span>
+          </button>
+
+          {/* Center Elevated Action Button: (+) */}
+          <button 
+            onClick={() => setActiveTab('add_modal')} 
+            className="dock-center-fab"
+            title="Nuevo Movimiento"
+          >
+            <Plus size={28} strokeWidth={3} />
+          </button>
+
+          {/* Tab 3: Finca Cafetera */}
+          <button 
+            onClick={() => {
+              setActiveTab('varios');
+              setVariosTab('minegocio');
+            }} 
+            className={`dock-item ${activeTab === 'varios' && variosTab === 'minegocio' ? 'active' : ''}`}
+            title="Finca Cafetera"
+          >
+            <Coffee size={22} className="dock-icon" />
+            <span className="dock-label">Finca</span>
+          </button>
+
+          {/* Tab 4: Más / Ajustes */}
+          <button 
+            onClick={() => {
+              setActiveTab('varios');
+              setVariosTab('menu');
+            }} 
+            className={`dock-item ${activeTab === 'varios' && variosTab !== 'minegocio' ? 'active' : ''}`}
+            title="Ajustes y Más"
+          >
+            <SlidersHorizontal size={22} className="dock-icon" />
+            <span className="dock-label">Ajustes</span>
+          </button>
+        </nav>
+      </div>
     </div>
   );
 }
