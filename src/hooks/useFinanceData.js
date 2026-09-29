@@ -1,6 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { fetchAllFromSupabase, migrateToSupabase, syncTransaction, deleteFromSupabase } from '../utils/supabaseSync';
+import { 
+  fetchAllFromSupabase, 
+  migrateToSupabase, 
+  syncTransaction, 
+  deleteFromSupabase,
+  syncBusiness,
+  deleteBusinessFromSupabase,
+  syncBusinessTransaction,
+  deleteBusinessTxFromSupabase,
+  syncBusinessWorker,
+  deleteBusinessWorkerFromSupabase
+} from '../utils/supabaseSync';
 import { generateAlerts } from '../utils/helpers';
 
 export function useFinanceData() {
@@ -66,7 +77,6 @@ export function useFinanceData() {
   useEffect(() => { localStorage.setItem('money-flow-business-workers', JSON.stringify(businessWorkers)); }, [businessWorkers]);
 
   useEffect(() => {
-    // Set a timeout to stop loading after 5 seconds in case getSession hangs
     const loadingTimeout = setTimeout(() => {
       console.warn('Supabase session fetch timed out, proceeding without session.');
       setLoading(false);
@@ -94,14 +104,23 @@ export function useFinanceData() {
     };
   }, []);
 
-
-  // Supabase Sync
+  // Supabase Sync bidireccional
   useEffect(() => {
     if (!session) return;
 
     const initSupabase = async () => {
       try {
-        const localData = { transactions, banks, goals, subscriptions, debts, piggyBanks };
+        const localData = { 
+          transactions, 
+          banks, 
+          goals, 
+          subscriptions, 
+          debts, 
+          piggyBanks,
+          businesses,
+          businessTransactions,
+          businessWorkers
+        };
         await migrateToSupabase(localData, session.user.id);
         const dbData = await fetchAllFromSupabase(session.user.id);
         
@@ -120,21 +139,33 @@ export function useFinanceData() {
         if (dbData.goals && (dbData.goals.income > 0 || dbData.goals.expense > 0)) {
           setGoals(dbData.goals);
         }
-        console.log('Datos de usuario sincronizados correctamente.');
+        if (dbData.piggyBanks && dbData.piggyBanks.length > 0) {
+          setPiggyBanks(dbData.piggyBanks);
+        }
+        if (dbData.businesses && dbData.businesses.length > 0) {
+          setBusinesses(dbData.businesses);
+        }
+        if (dbData.businessTransactions && dbData.businessTransactions.length > 0) {
+          setBusinessTransactions(dbData.businessTransactions);
+        }
+        if (dbData.businessWorkers && dbData.businessWorkers.length > 0) {
+          setBusinessWorkers(dbData.businessWorkers);
+        }
+        console.log('Datos de usuario y negocios sincronizados con Supabase correctamente.');
       } catch (err) {
-        console.error('Error sincronizando datos:', err);
+        console.error('Error sincronizando datos con Supabase:', err);
       }
     };
 
     initSupabase();
   }, [session]);
 
-  // Alerts generation
+  // Generación de alertas
   useEffect(() => {
     setAlerts(generateAlerts(transactions, goals));
   }, [transactions, goals]);
 
-  // Actions
+  // Transacciones personales
   const addTransaction = async (tx) => {
     if (!session) return;
     const dbTx = await syncTransaction(tx, session.user.id);
@@ -162,8 +193,12 @@ export function useFinanceData() {
     }
   };
 
+  // Deudas
   const addDebt = async (d) => {
-    if (!session) return;
+    if (!session) {
+      setDebts(prev => [d, ...prev]);
+      return;
+    }
     const { data } = await supabase.from('debts').insert({
       person: d.person,
       amount: d.amount,
@@ -182,14 +217,14 @@ export function useFinanceData() {
 
   const deleteDebt = async (id) => {
     setDebts(prev => prev.filter(d => d.id !== id));
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (isUUID) await deleteFromSupabase('debts', id);
+    if (session) {
+      await deleteFromSupabase('debts', id);
+    }
   };
 
   const updateDebt = async (id, updates) => {
     setDebts(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (isUUID) {
+    if (session) {
       await supabase.from('debts').update(updates).eq('id', id);
     }
   };
@@ -198,127 +233,135 @@ export function useFinanceData() {
     const debt = debts.find(d => d.id === id);
     if (!debt) return;
     const newPaid = !debt.paid;
-    updateDebt(id, { paid: newPaid });
+    setDebts(prev => prev.map(d => d.id === id ? { ...d, paid: newPaid } : d));
+    if (session) {
+      await supabase.from('debts').update({ paid: newPaid }).eq('id', id);
+    }
   };
 
-  const partialPaymentDebt = async (id, amount) => {
+  const partialPaymentDebt = async (id, paymentAmount) => {
     const debt = debts.find(d => d.id === id);
-    if (!debt || amount <= 0 || amount > debt.amount) return;
-
-    const newAmount = debt.amount - amount;
-    const isPaid = newAmount <= 0.01;
-
-    await updateDebt(id, { amount: newAmount, paid: isPaid });
-
-    await addTransaction({
-      id: Date.now().toString(),
-      description: `Abono a deuda: ${debt.person}`,
-      amount: amount,
-      type: 'expense',
-      category: debt.type === 'owe' ? 'other_expense' : 'savings',
-      date: new Date().toISOString()
-    });
+    if (!debt) return;
+    const newAmount = Math.max(0, debt.amount - paymentAmount);
+    const newPaid = newAmount === 0;
+    setDebts(prev => prev.map(d => d.id === id ? { ...d, amount: newAmount, paid: newPaid } : d));
+    if (session) {
+      await supabase.from('debts').update({ amount: newAmount, paid: newPaid }).eq('id', id);
+    }
   };
 
+  // Suscripciones
   const addSubscription = async (s) => {
-    if (!session) return;
+    if (!session) {
+      setSubscriptions(prev => [...prev, s]);
+      return;
+    }
     const { data } = await supabase.from('subscriptions').insert({
       name: s.name,
       amount: s.amount,
       day: s.day,
       category: s.category,
-      account_id: s.accountId,
+      account_id: String(s.accountId),
       last_processed: s.lastProcessed,
       user_id: session.user.id
     }).select();
 
     if (data && data[0]) {
-      setSubscriptions(prev => [{ ...s, id: data[0].id }, ...prev]);
+      setSubscriptions(prev => [...prev, { ...s, id: data[0].id }]);
     } else {
-      setSubscriptions(prev => [s, ...prev]);
+      setSubscriptions(prev => [...prev, s]);
     }
   };
 
   const deleteSubscription = async (id) => {
     setSubscriptions(prev => prev.filter(s => s.id !== id));
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (isUUID) await deleteFromSupabase('subscriptions', id);
+    if (session) {
+      await deleteFromSupabase('subscriptions', id);
+    }
   };
 
   const updateSubscription = async (id, updates) => {
     setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (isUUID) {
-      await supabase.from('subscriptions').update(updates).eq('id', id);
+    if (session) {
+      const payload = { ...updates };
+      if (payload.accountId) {
+        payload.account_id = String(payload.accountId);
+        delete payload.accountId;
+      }
+      if (payload.lastProcessed) {
+        payload.last_processed = payload.lastProcessed;
+        delete payload.lastProcessed;
+      }
+      await supabase.from('subscriptions').update(payload).eq('id', id);
     }
   };
 
-  const addBank = async (name) => {
-    if (!session) return;
-    const tempId = 'temp_' + Date.now();
-    setBanks(prev => [...prev, { id: tempId, name }]);
-    try {
-      const { data, error } = await supabase.from('banks').insert({ name, user_id: session.user.id }).select();
-      if (error) throw error;
+  // Bancos
+  const addBank = async (bankName) => {
+    const tempId = `bank_${Date.now()}`;
+    const newBank = { id: tempId, name: bankName };
+    setBanks(prev => [...prev, newBank]);
+
+    if (session) {
+      const { data } = await supabase.from('banks').insert({
+        name: bankName,
+        user_id: session.user.id
+      }).select();
       if (data && data[0]) {
         setBanks(prev => prev.map(b => b.id === tempId ? { id: data[0].id, name: data[0].name } : b));
       }
-    } catch (err) {
-      console.error('Error adding bank:', err);
     }
   };
 
   const deleteBank = async (id) => {
-    if (banks.length <= 1) return alert('Debes tener al menos un banco.');
     setBanks(prev => prev.filter(b => b.id !== id));
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (isUUID) await deleteFromSupabase('banks', id);
+    if (session && !id.startsWith('bank_')) {
+      await deleteFromSupabase('banks', id);
+    }
   };
 
+  // Cochinitos / Alcancías
   const addPiggyBank = async (p) => {
-    if (!session) return;
-    const { data } = await supabase.from('piggy_banks').insert({
-      name: p.name,
-      goal: p.goal,
-      saved: p.saved,
-      icon: p.icon,
-      user_id: session.user.id
-    }).select();
-
-    if (data && data[0]) {
-      setPiggyBanks(prev => [...prev, { ...p, id: data[0].id }]);
-    } else {
-      setPiggyBanks(prev => [...prev, p]);
+    setPiggyBanks(prev => [...prev, p]);
+    if (session) {
+      const { data } = await supabase.from('piggy_banks').insert({
+        name: p.name,
+        target: p.target,
+        saved: p.saved || 0,
+        icon: p.icon || '🐷',
+        user_id: session.user.id
+      }).select();
+      if (data && data[0]) {
+        setPiggyBanks(prev => prev.map(item => item.id === p.id ? { ...item, id: data[0].id } : item));
+      }
     }
   };
 
   const deletePiggyBank = async (id) => {
     setPiggyBanks(prev => prev.filter(p => p.id !== id));
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (isUUID) await deleteFromSupabase('piggy_banks', id);
+    if (session) {
+      await deleteFromSupabase('piggy_banks', id);
+    }
   };
 
   const updatePiggyBank = async (id, updates) => {
     setPiggyBanks(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (isUUID) {
+    if (session) {
       await supabase.from('piggy_banks').update(updates).eq('id', id);
     }
   };
 
+  // Negocios (Fincas, etc.)
   const addBusiness = async (b) => {
-    const defaults = {
-      quickActions: []
-    };
-    
-    if (b.type.toLowerCase().includes('café') || b.type.toLowerCase().includes('cafe')) {
+    const defaults = { quickActions: [] };
+    if (b.type && (b.type.toLowerCase().includes('café') || b.type.toLowerCase().includes('cafe'))) {
       defaults.quickActions = [
         { id: 'q1', name: 'Venta Café Pergamino', amount: 0, type: 'income', icon: '☕' },
         { id: 'q2', name: 'Fertilizantes', amount: 0, type: 'expense', icon: '🌱' },
         { id: 'q3', name: 'Agroquímicos', amount: 0, type: 'expense', icon: '🧪' },
         { id: 'q4', name: 'Remesa / Mercado', amount: 0, type: 'expense', icon: '🛒' },
       ];
-    } else if (b.type.toLowerCase().includes('ganadería') || b.type.toLowerCase().includes('ganaderia')) {
+    } else if (b.type && (b.type.toLowerCase().includes('ganadería') || b.type.toLowerCase().includes('ganaderia'))) {
       defaults.quickActions = [
         { id: 'q1', name: 'Venta de Leche', amount: 0, type: 'income', icon: '🥛' },
         { id: 'q2', name: 'Venta de Queso', amount: 0, type: 'income', icon: '🧀' },
@@ -331,14 +374,7 @@ export function useFinanceData() {
     setBusinesses(prev => [...prev, business]);
     
     if (session) {
-      try {
-        await supabase.from('businesses').insert({
-          ...business,
-          user_id: session.user.id
-        });
-      } catch (err) {
-        console.error('Error syncing business to Supabase:', err);
-      }
+      await syncBusiness(business, session.user.id);
     }
   };
 
@@ -348,26 +384,93 @@ export function useFinanceData() {
       setBusinessTransactions(prev => prev.filter(t => t.businessId !== id));
       setBusinessWorkers(prev => prev.filter(w => w.businessId !== id));
       
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      if (isUUID) {
-        try {
-          await deleteFromSupabase('businesses', id);
-        } catch (err) {
-          console.error('Error deleting business from Supabase:', err);
-        }
+      if (session) {
+        await deleteBusinessFromSupabase(id);
       }
     }
   };
 
   const updateBusiness = async (id, updates) => {
     setBusinesses(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (isUUID) {
-      try {
-        await supabase.from('businesses').update(updates).eq('id', id);
-      } catch (err) {
-        console.error('Error updating business in Supabase:', err);
+    if (session) {
+      const biz = businesses.find(b => b.id === id);
+      if (biz) {
+        await syncBusiness({ ...biz, ...updates }, session.user.id);
       }
+    }
+  };
+
+  // Movimientos de Negocio
+  const addBusinessTransaction = async (btx) => {
+    setBusinessTransactions(prev => [btx, ...prev]);
+    if (session) {
+      await syncBusinessTransaction(btx, session.user.id);
+    }
+  };
+
+  const deleteBusinessTransaction = async (id) => {
+    setBusinessTransactions(prev => prev.filter(t => t.id !== id));
+    if (session) {
+      await deleteBusinessTxFromSupabase(id);
+    }
+  };
+
+  // Manejador reactivo para setBusinessTransactions cuando se agrega o elimina un elemento
+  const handleSetBusinessTransactions = (updater) => {
+    if (typeof updater === 'function') {
+      setBusinessTransactions(prev => {
+        const next = updater(prev);
+        if (session) {
+          if (next.length > prev.length) {
+            const newTx = next[0];
+            syncBusinessTransaction(newTx, session.user.id);
+          } else if (next.length < prev.length) {
+            const nextIds = new Set(next.map(t => t.id));
+            const deleted = prev.filter(t => !nextIds.has(t.id));
+            deleted.forEach(t => deleteBusinessTxFromSupabase(t.id));
+          }
+        }
+        return next;
+      });
+    } else {
+      setBusinessTransactions(updater);
+    }
+  };
+
+  // Trabajadores de Finca / Negocio
+  const addBusinessWorker = async (worker) => {
+    setBusinessWorkers(prev => [...prev, worker]);
+    if (session) {
+      await syncBusinessWorker(worker, session.user.id);
+    }
+  };
+
+  const deleteBusinessWorker = async (id) => {
+    setBusinessWorkers(prev => prev.filter(w => w.id !== id));
+    if (session) {
+      await deleteBusinessWorkerFromSupabase(id);
+    }
+  };
+
+  // Manejador reactivo para setBusinessWorkers cuando se agrega o elimina un elemento
+  const handleSetBusinessWorkers = (updater) => {
+    if (typeof updater === 'function') {
+      setBusinessWorkers(prev => {
+        const next = updater(prev);
+        if (session) {
+          if (next.length > prev.length) {
+            const newWorker = next[next.length - 1];
+            syncBusinessWorker(newWorker, session.user.id);
+          } else if (next.length < prev.length) {
+            const nextIds = new Set(next.map(w => w.id));
+            const deleted = prev.filter(w => !nextIds.has(w.id));
+            deleted.forEach(w => deleteBusinessWorkerFromSupabase(w.id));
+          }
+        }
+        return next;
+      });
+    } else {
+      setBusinessWorkers(updater);
     }
   };
 
@@ -375,23 +478,22 @@ export function useFinanceData() {
     transactions, setTransactions,
     goals, setGoals,
     debts, setDebts,
-    addDebt, deleteDebt, updateDebt, toggleDebtPaid,
+    addDebt, deleteDebt, updateDebt, toggleDebtPaid, partialPaymentDebt,
     subscriptions, setSubscriptions,
     addSubscription, deleteSubscription, updateSubscription,
     piggyBanks, setPiggyBanks,
     addPiggyBank, deletePiggyBank, updatePiggyBank,
     banks, setBanks,
     businesses, setBusinesses, addBusiness, deleteBusiness, updateBusiness,
-    businessTransactions, setBusinessTransactions,
-    businessWorkers, setBusinessWorkers,
+    businessTransactions, setBusinessTransactions: handleSetBusinessTransactions,
+    addBusinessTransaction, deleteBusinessTransaction,
+    businessWorkers, setBusinessWorkers: handleSetBusinessWorkers,
+    addBusinessWorker, deleteBusinessWorker,
     session, setSession,
     loading, setLoading,
     alerts, setAlerts,
     addTransaction,
     deleteTransaction,
-    deleteDebt,
-    toggleDebtPaid,
-    partialPaymentDebt,
     addBank,
     deleteBank,
   };
