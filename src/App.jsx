@@ -19,6 +19,7 @@ import BusinessGate from './components/BusinessGate';
 import BusinessDashboard from './components/BusinessDashboard';
 import { hasLocalPin } from './utils/crypto';
 import { useFinanceData } from './hooks/useFinanceData';
+import { ToastProvider } from './components/ui/Toast';
 
 const ACCOUNTS = [
   { id: 'cash',    label: 'Efectivo',   icon: '💵', color: '#34C759' },
@@ -238,7 +239,38 @@ function AppContent() {
     <div className={`app-container ${hideBalance ? 'hide-balance' : ''}`}>
       <header className="app-header">
         <div>
-          <h1>{username ? `Hola, ${username}` : 'MoneyFlow'}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h1>{username ? `Hola, ${username}` : 'MoneyFlow'}</h1>
+            {session ? (
+              <span title="Sincronizado con Supabase Cloud" style={{
+                fontSize: '0.68rem',
+                background: 'rgba(52,199,89,0.15)',
+                color: '#34c759',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontWeight: '600',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                border: '1px solid rgba(52,199,89,0.3)'
+              }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34c759', display: 'inline-block' }}></span>
+                Cloud Sync
+              </span>
+            ) : (
+              <span title="Modo local sin conexión remota" style={{
+                fontSize: '0.68rem',
+                background: 'rgba(255,149,0,0.15)',
+                color: '#ff9500',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontWeight: '600',
+                border: '1px solid rgba(255,149,0,0.3)'
+              }}>
+                💾 Local
+              </span>
+            )}
+          </div>
           <p>{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <div className="header-actions">
@@ -401,7 +433,9 @@ function AppContent() {
 export default function App() {
   return (
     <SettingsProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </SettingsProvider>
   );
 }

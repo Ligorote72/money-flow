@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
+import ReceiptModal from './ui/ReceiptModal';
+import confetti from 'canvas-confetti';
 
 const QuickActionModal = ({ action, onSave, onClose }) => {
   const [name, setName] = useState(action?.name || '');
@@ -100,6 +102,7 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
   const [workerRate, setWorkerRate] = useState('');
   const [payWorkerId, setPayWorkerId] = useState(null);
   const [payUnits, setPayUnits] = useState('');
+  const [currentReceipt, setCurrentReceipt] = useState(null);
 
   // 1. Business Context Memos
   const activeBusiness = useMemo(() => (businesses || []).find(b => b.id === activeBusinessId), [businesses, activeBusinessId]);
@@ -123,6 +126,25 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
     const expense = activeBizTxs.filter(t => t.type === 'expense').reduce((a, b) => a + (b.amount || 0), 0);
     return { income, expense, balance: income - expense };
   }, [activeBizTxs]);
+
+  const harvestStats = useMemo(() => {
+    let totalArrobas = 0;
+    let totalHarvestPaid = 0;
+    activeBizTxs.forEach(t => {
+      if (t.type === 'expense') {
+        const m = t.description?.match(/([\d.]+)\s*@/);
+        if (m) {
+          totalArrobas += parseFloat(m[1]) || 0;
+          totalHarvestPaid += t.amount || 0;
+        }
+      }
+    });
+    return {
+      totalArrobas,
+      totalHarvestPaid,
+      activeWorkerCount: activeWorkers.length
+    };
+  }, [activeBizTxs, activeWorkers]);
 
   // 3. Effects
   useEffect(() => {
@@ -447,7 +469,47 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
                         <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{new Date(tx.date).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {tx.description?.includes(':') && (
+                        <button
+                          title="Ver Recibo Digital"
+                          onClick={() => {
+                            const parts = tx.description.split(':');
+                            const act = parts[0]?.trim() || 'Pago';
+                            const rest = parts[1]?.trim() || '';
+                            const matchWorker = rest.match(/^(.*?)\s*\((.*?)\)$/);
+                            const workerName = matchWorker ? matchWorker[1] : rest;
+                            const qtyUnit = matchWorker ? matchWorker[2] : '';
+                            const [qtyVal, unit] = qtyUnit.split(' ');
+                            const qtyNum = parseFloat(qtyVal) || 1;
+                            const unitLabel = unit || '';
+                            const rate = qtyNum > 0 ? (tx.amount / qtyNum) : tx.amount;
+
+                            setCurrentReceipt({
+                              id: `REC-${tx.id.slice(-6)}`,
+                              workerName: workerName || 'Trabajador',
+                              workerType: unitLabel.includes('@') ? 'Cogedor (@)' : 'Jornalero',
+                              activity: act,
+                              quantity: qtyNum,
+                              unitLabel: unitLabel || 'Día',
+                              rate: rate,
+                              total: tx.amount,
+                              businessName: activeBusiness?.name || 'Finca Cafetera',
+                              date: new Date(tx.date).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            });
+                          }}
+                          style={{
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            borderRadius: '8px',
+                            padding: '4px 8px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          🧾
+                        </button>
+                      )}
                       <span style={{ color: tx.type === 'income' ? 'var(--income)' : 'var(--expense)', fontWeight: '700' }}>{tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
                       <button onClick={() => { if(window.confirm('¿Eliminar?')) setTransactions(prev => prev.filter(t => t.id !== tx.id)); }} style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.3)', cursor: 'pointer' }}>×</button>
                     </div>
@@ -459,6 +521,58 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
 
           {activeTab === 'workers' && (
             <div className="animate-fade">
+              {/* AgroTech Harvest KPI Summary Banner */}
+              {bizType === 'coffee' && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '10px',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(52,199,89,0.12), rgba(0,0,0,0.3))',
+                    border: '1px solid rgba(52,199,89,0.25)',
+                    borderRadius: '16px',
+                    padding: '12px 10px',
+                    textAlign: 'center'
+                  }}>
+                    <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '2px' }}>☕</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cosechadas</span>
+                    <p style={{ fontSize: '1.15rem', fontWeight: '800', color: '#34c759', marginTop: '2px' }}>
+                      {harvestStats.totalArrobas.toFixed(1)} <span style={{ fontSize: '0.75rem' }}>@</span>
+                    </p>
+                  </div>
+
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(255,149,0,0.12), rgba(0,0,0,0.3))',
+                    border: '1px solid rgba(255,149,0,0.25)',
+                    borderRadius: '16px',
+                    padding: '12px 8px',
+                    textAlign: 'center'
+                  }}>
+                    <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '2px' }}>💰</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inversión</span>
+                    <p style={{ fontSize: '0.9rem', fontWeight: '800', color: '#ff9500', marginTop: '4px' }}>
+                      {formatCurrency(harvestStats.totalHarvestPaid)}
+                    </p>
+                  </div>
+
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(88,86,214,0.12), rgba(0,0,0,0.3))',
+                    border: '1px solid rgba(88,86,214,0.25)',
+                    borderRadius: '16px',
+                    padding: '12px 10px',
+                    textAlign: 'center'
+                  }}>
+                    <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '2px' }}>👷‍♂️</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activos</span>
+                    <p style={{ fontSize: '1.15rem', fontWeight: '800', color: '#af52de', marginTop: '2px' }}>
+                      {harvestStats.activeWorkerCount}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Gestión de Trabajadores</h3>
                 <button onClick={() => setIsAddingWorker(!isAddingWorker)} className="btn-primary" style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '0.9rem' }}>{isAddingWorker ? 'Cancelar' : '+ Nuevo Trabajador'}</button>
@@ -589,17 +703,39 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
                         <button 
                           onClick={() => {
                             const qty = parseFloat(workerRate) || 0;
-                            const rate = (workerType === 'Recolectar' && payUnits.includes('@')) ? (activeBusiness.arrobaRate || 0) : (activeBusiness.dailyRate || 0);
+                            const isArroba = (workerType === 'Recolectar' && payUnits.includes('@'));
+                            const rate = isArroba ? (activeBusiness.arrobaRate || 0) : (activeBusiness.dailyRate || 0);
                             const amount = qty * rate;
-                            const unitLabel = (workerType === 'Recolectar' && payUnits.includes('@')) ? '@' : 'Días';
+                            const unitLabel = isArroba ? '@' : 'Días';
                             const desc = `${workerType}: ${w.name} (${qty} ${unitLabel})`;
                             handleAddTx(null, desc, 'expense', amount);
+                            
+                            // Generate Receipt & Confetti
+                            const receiptData = {
+                              id: `REC-${Date.now().toString().slice(-6)}`,
+                              workerName: w.name,
+                              workerType: isArroba ? 'Cogedor (@)' : 'Jornalero',
+                              activity: workerType,
+                              quantity: qty,
+                              unitLabel: unitLabel,
+                              rate: rate,
+                              total: amount,
+                              businessName: activeBusiness?.name || 'Finca Cafetera',
+                              date: new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            };
+                            setCurrentReceipt(receiptData);
+                            try {
+                              confetti({ particleCount: 80, spread: 70, origin: { y: 0.65 } });
+                            } catch (err) {
+                              console.warn('Confetti error:', err);
+                            }
+
                             setPayWorkerId(null);
                             setWorkerRate('');
                             setPayUnits('');
                           }}
                           className="btn-primary" style={{ width: '100%', marginTop: '16px', padding: '14px' }}>
-                          Confirmar Pago
+                          Confirmar Pago y Generar Recibo 🧾
                         </button>
                       </div>
                     )}
@@ -610,6 +746,12 @@ const BusinessDashboard = ({ businesses, addBusiness, deleteBusiness, updateBusi
           )}
         </>
       )}
+
+      {/* Digital Receipt Modal */}
+      <ReceiptModal 
+        receipt={currentReceipt} 
+        onClose={() => setCurrentReceipt(null)} 
+      />
     </div>
   );
 };

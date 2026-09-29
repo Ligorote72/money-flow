@@ -1,7 +1,24 @@
 import React, { useState } from 'react';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
+import NumberTicker from './ui/NumberTicker';
+import ShineBorder from './ui/ShineBorder';
+import { ArrowUpRight, ArrowDownRight, Landmark, PiggyBank, Wallet, Plus, ChevronDown, Trash2, ArrowLeft, X } from 'lucide-react';
 
-const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBalances = {}, hideBalance = false, username, totalPiggySavings = 0, banks = [], onAddBank, onDeleteBank, onAdjustSavings, onAddBankTransaction }) => {
+const BalanceCard = ({ 
+  totalBalance, 
+  income, 
+  expenses, 
+  accounts = [], 
+  accountBalances = {}, 
+  hideBalance = false, 
+  username, 
+  totalPiggySavings = 0, 
+  banks = [], 
+  onAddBank, 
+  onDeleteBank, 
+  onAdjustSavings, 
+  onAddBankTransaction 
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
   const [newBankName, setNewBankName] = useState('');
@@ -13,100 +30,198 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
   const [bankTxType, setBankTxType] = useState('expense');
   const [bankTxDesc, setBankTxDesc] = useState('');
 
-  const mask = (val) => hideBalance ? 'â€¢â€¢â€¢â€¢â€¢â€¢' : formatCurrency(val);
+  const mask = (val) => hideBalance ? '••••••' : formatCurrency(val);
 
   return (
-    <div className="card animate-fade">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Balance Total</p>
-        <span style={{ fontSize: '1.6rem', color: 'var(--primary)', fontWeight: '700', opacity: 0.9 }}>
-          {username ? `${username}` : ''}
-        </span>
-      </div>
-      <h2 style={{ fontSize: '2.5rem', marginBottom: '24px', transition: 'opacity 0.2s', letterSpacing: '-0.02em' }}>
-        {mask(totalBalance)}
-      </h2>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
-        <div style={{ flex: 1 }}>
-          <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>Ingresos</p>
-          <p style={{ color: 'var(--income)', fontWeight: '600' }}>+{mask(income)}</p>
-        </div>
-        <div style={{ flex: 1, textAlign: 'right' }}>
-          <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>Gastos</p>
-          <p style={{ color: 'var(--expense)', fontWeight: '600' }}>-{mask(expenses)}</p>
-        </div>
-      </div>
-
-      {/* Desglose por cuentas */}
-      <div style={{ 
-        display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px',
-        paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)'
-      }}>
-        {accounts.map(acc => (
-          <div 
-            key={acc.id} 
-            onClick={() => {
-              if (acc.id === 'bank') setIsModalOpen(true);
-              if (acc.id === 'savings') {
-                setSavingsInput(accountBalances.savings.toString());
-                setIsSavingsModalOpen(true);
-              }
-            }}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '8px', 
-              background: 'rgba(255,255,255,0.03)', padding: '8px 10px', borderRadius: '12px',
-              cursor: (acc.id === 'bank' || acc.id === 'savings') ? 'pointer' : 'default',
-              border: (acc.id === 'bank' || acc.id === 'savings') ? '1px solid rgba(255,255,255,0.05)' : 'none',
-              transition: 'transform 0.2s'
-            }}
-            className={acc.id === 'bank' ? 'hover-scale' : ''}
-          >
-            <span style={{ fontSize: '1rem' }}>{acc.icon}</span>
-            <div>
-              <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', position: 'relative' }}>
-                {acc.label}
-                {acc.id === 'bank' && <span style={{ fontSize: '0.5rem', marginLeft: '4px', opacity: 0.5 }}>â–¼</span>}
+    <div style={{ margin: '16px' }} className="animate-fade">
+      <ShineBorder borderRadius={28} borderWidth={1.5} duration={7} color={['#c4fb6d', '#007AFF', '#34c759']}>
+        <div style={{ padding: '24px' }}>
+          {/* Header del Balance */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ 
+                width: '8px', height: '8px', borderRadius: '50%', 
+                background: 'var(--primary)', boxShadow: '0 0 10px var(--primary)' 
+              }} />
+              <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Balance Disponible
               </p>
-              <p style={{ fontSize: '0.8rem', fontWeight: '600', color: accountBalances[acc.id] < 0 ? 'var(--expense)' : 'white' }}>
-                {mask(accountBalances[acc.id])}
+            </div>
+            {username && (
+              <span style={{ 
+                fontSize: '0.85rem', 
+                color: 'var(--primary)', 
+                fontWeight: '700',
+                background: 'rgba(var(--primary-rgb), 0.1)',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                border: '1px solid rgba(var(--primary-rgb), 0.2)'
+              }}>
+                {username}
+              </span>
+            )}
+          </div>
+
+          {/* Saldo Principal con NumberTicker */}
+          <div style={{ marginBottom: '20px' }}>
+            <h2 style={{ 
+              fontSize: '2.6rem', 
+              fontWeight: '800',
+              lineHeight: 1.1, 
+              letterSpacing: '-0.03em',
+              background: 'linear-gradient(180deg, #FFFFFF 0%, rgba(255,255,255,0.85) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              <NumberTicker value={totalBalance} hide={hideBalance} />
+            </h2>
+          </div>
+
+          {/* Tarjetas de Ingresos vs Gastos */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ 
+              background: 'rgba(52, 199, 89, 0.08)', 
+              padding: '12px 14px', 
+              borderRadius: '16px',
+              border: '1px solid rgba(52, 199, 89, 0.2)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <div style={{ 
+                  background: 'rgba(52, 199, 89, 0.2)', 
+                  borderRadius: '50%', padding: '4px', display: 'flex' 
+                }}>
+                  <ArrowUpRight size={14} color="#34c759" />
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: '500' }}>Ingresos</span>
+              </div>
+              <p style={{ color: '#34c759', fontWeight: '700', fontSize: '1.05rem', margin: 0 }}>
+                +{hideBalance ? '••••••' : formatCurrency(income)}
+              </p>
+            </div>
+
+            <div style={{ 
+              background: 'rgba(255, 59, 48, 0.08)', 
+              padding: '12px 14px', 
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 59, 48, 0.2)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <div style={{ 
+                  background: 'rgba(255, 59, 48, 0.2)', 
+                  borderRadius: '50%', padding: '4px', display: 'flex' 
+                }}>
+                  <ArrowDownRight size={14} color="#ff3b30" />
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: '500' }}>Gastos</span>
+              </div>
+              <p style={{ color: '#ff3b30', fontWeight: '700', fontSize: '1.05rem', margin: 0 }}>
+                -{hideBalance ? '••••••' : formatCurrency(expenses)}
               </p>
             </div>
           </div>
-        ))}
-        {/* Card de Cochinitos dentro del grid */}
-        <div style={{ 
-          display: 'flex', alignItems: 'center', gap: '8px', 
-          background: 'rgba(var(--primary-rgb), 0.1)', padding: '8px 10px', borderRadius: '12px',
-          border: '1px solid rgba(var(--primary-rgb), 0.15)'
-        }}>
-          <span style={{ fontSize: '1rem' }}>💰</span>
-          <div>
-            <p style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: '600' }}>Cochinitos</p>
-            <p style={{ fontSize: '0.8rem', fontWeight: '700', color: 'white' }}>
-              {mask(totalPiggySavings)}
-            </p>
+
+          {/* Desglose por Cuentas y Cochinitos */}
+          <div style={{ 
+            display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px',
+            paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)'
+          }}>
+            {accounts.map(acc => {
+              const isBank = acc.id === 'bank';
+              const isSavings = acc.id === 'savings';
+              const isClickable = isBank || isSavings;
+
+              return (
+                <div 
+                  key={acc.id} 
+                  onClick={() => {
+                    if (isBank) setIsModalOpen(true);
+                    if (isSavings) {
+                      setSavingsInput(accountBalances.savings?.toString() || '0');
+                      setIsSavingsModalOpen(true);
+                    }
+                  }}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '10px', 
+                    background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '14px',
+                    cursor: isClickable ? 'pointer' : 'default',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isClickable) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                      e.currentTarget.style.borderColor = 'rgba(var(--primary-rgb), 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isClickable) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                    }
+                  }}
+                >
+                  <span style={{ fontSize: '1.1rem' }}>{acc.icon}</span>
+                  <div style={{ overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', margin: 0, fontWeight: '500' }}>
+                        {acc.label}
+                      </p>
+                      {isBank && <ChevronDown size={11} color="var(--primary)" />}
+                    </div>
+                    <p style={{ 
+                      fontSize: '0.88rem', fontWeight: '700', margin: 0,
+                      color: accountBalances[acc.id] < 0 ? 'var(--expense)' : 'white' 
+                    }}>
+                      {mask(accountBalances[acc.id] || 0)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Tarjeta de Cochinitos */}
+            <div style={{ 
+              display: 'flex', alignItems: 'center', gap: '10px', 
+              background: 'rgba(var(--primary-rgb), 0.08)', padding: '10px 12px', borderRadius: '14px',
+              border: '1px solid rgba(var(--primary-rgb), 0.2)'
+            }}>
+              <span style={{ fontSize: '1.1rem' }}>🐷</span>
+              <div>
+                <p style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: '600', margin: 0 }}>Cochinitos</p>
+                <p style={{ fontSize: '0.88rem', fontWeight: '800', color: 'white', margin: 0 }}>
+                  {mask(totalPiggySavings)}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </ShineBorder>
 
       {/* MODAL DE BANCOS */}
       {isModalOpen && (
         <div className="animate-fade" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
         }}>
           <div className="card" style={{ 
-            width: '100%', maxWidth: '400px', maxHeight: '80vh', 
-            overflowY: 'auto', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.1)' 
+            width: '100%', maxWidth: '400px', maxHeight: '85vh', 
+            overflowY: 'auto', background: '#12151c', border: '1px solid rgba(255,255,255,0.1)',
+            padding: '24px', borderRadius: '24px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>
-                {selectedBankId ? `Movimiento en ${banks.find(b => b.id === selectedBankId)?.name}` : 'Mis Bancos 🏛️'}
-              </h3>
-              <button onClick={() => { if(selectedBankId) setSelectedBankId(null); else setIsModalOpen(false); }} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>
-                {selectedBankId ? '⬅️' : '×'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Landmark size={20} color="var(--primary)" />
+                <h3 style={{ fontSize: '1.15rem', color: 'white', fontWeight: '700' }}>
+                  {selectedBankId ? `Movimiento en ${banks.find(b => b.id === selectedBankId)?.name}` : 'Mis Cuentas Bancarias'}
+                </h3>
+              </div>
+              <button 
+                onClick={() => { if(selectedBankId) setSelectedBankId(null); else setIsModalOpen(false); }} 
+                style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', cursor: 'pointer' }}
+              >
+                {selectedBankId ? <ArrowLeft size={16} /> : <X size={16} />}
               </button>
             </div>
 
@@ -118,24 +233,47 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                       onClick={() => setSelectedBankId(b.id)}
                       style={{ 
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                        padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '14px',
-                        cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)'
-                      }}>
+                        padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px',
+                        cursor: 'pointer', border: '1px solid rgba(255,255,255,0.06)',
+                        transition: 'transform 0.15s, background 0.15s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                    >
                       <div>
-                        <p style={{ fontWeight: '600', fontSize: '0.95rem' }}>{b.name}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Saldo: {mask(accountBalances.bankDetails?.[b.id] || 0)}</p>
+                        <p style={{ fontWeight: '700', fontSize: '0.95rem', color: 'white', marginBottom: '2px' }}>{b.name}</p>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                          Saldo: <strong style={{ color: 'var(--primary)' }}>{mask(accountBalances.bankDetails?.[b.id] || 0)}</strong>
+                        </p>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); onDeleteBank(b.id); }} style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.5)', cursor: 'pointer', padding: '8px' }}>🗑️</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: '600', background: 'rgba(var(--primary-rgb), 0.1)', padding: '4px 8px', borderRadius: '8px' }}>
+                          Operar +
+                        </span>
+                        {b.id !== 'general' && (
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              if (window.confirm(`¿Eliminar la cuenta ${b.name}?`)) onDeleteBank(b.id); 
+                            }} 
+                            style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.5)', cursor: 'pointer', padding: '6px' }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
 
-                <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '8px' }}>+ Agregar nuevo banco</p>
+                <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '8px', fontWeight: '500' }}>
+                    + Registrar nueva cuenta o billetera
+                  </p>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input 
                       type="text" value={newBankName} onChange={e => setNewBankName(e.target.value)} 
-                      placeholder="Nombre del banco..." style={{ margin: 0, padding: '10px 14px' }}
+                      placeholder="Ej: Nequi, Bancolombia..." style={{ margin: 0, padding: '12px 14px' }}
                     />
                     <button 
                       onClick={() => {
@@ -145,26 +283,58 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                         }
                       }}
                       disabled={!newBankName.trim()}
-                      className="btn-primary" style={{ padding: '0 16px', whiteSpace: 'nowrap' }}
-                    >Añadir</button>
+                      className="btn-primary" style={{ padding: '0 18px', whiteSpace: 'nowrap' }}
+                    >
+                      Añadir
+                    </button>
                   </div>
                 </div>
               </>
             ) : (
               <div className="animate-fade">
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                  <button onClick={() => setBankTxType('income')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid', borderColor: bankTxType === 'income' ? 'var(--income)' : 'rgba(255,255,255,0.1)', background: bankTxType === 'income' ? 'rgba(52,199,89,0.15)' : 'transparent', color: bankTxType === 'income' ? 'var(--income)' : 'var(--text-dim)', fontWeight: '700' }}>â†‘ Ingreso</button>
-                  <button onClick={() => setBankTxType('expense')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid', borderColor: bankTxType === 'expense' ? 'var(--expense)' : 'rgba(255,255,255,0.1)', background: bankTxType === 'expense' ? 'rgba(255,59,48,0.15)' : 'transparent', color: bankTxType === 'expense' ? 'var(--expense)' : 'var(--text-dim)', fontWeight: '700' }}>â†“ Egreso</button>
+                  <button 
+                    onClick={() => setBankTxType('income')} 
+                    style={{ 
+                      flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid', 
+                      borderColor: bankTxType === 'income' ? 'var(--income)' : 'rgba(255,255,255,0.1)', 
+                      background: bankTxType === 'income' ? 'rgba(52,199,89,0.15)' : 'transparent', 
+                      color: bankTxType === 'income' ? 'var(--income)' : 'var(--text-dim)', fontWeight: '700' 
+                    }}
+                  >
+                    ↑ Ingreso
+                  </button>
+                  <button 
+                    onClick={() => setBankTxType('expense')} 
+                    style={{ 
+                      flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid', 
+                      borderColor: bankTxType === 'expense' ? 'var(--expense)' : 'rgba(255,255,255,0.1)', 
+                      background: bankTxType === 'expense' ? 'rgba(255,59,48,0.15)' : 'transparent', 
+                      color: bankTxType === 'expense' ? 'var(--expense)' : 'var(--text-dim)', fontWeight: '700' 
+                    }}
+                  >
+                    ↓ Egreso
+                  </button>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>Descripción</label>
-                  <input type="text" value={bankTxDesc} onChange={e => setBankTxDesc(e.target.value)} placeholder="Ej: Depósito, Pago de cliente..." />
+                  <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px' }}>
+                    Concepto / Descripción
+                  </label>
+                  <input type="text" value={bankTxDesc} onChange={e => setBankTxDesc(e.target.value)} placeholder="Ej: Pago de cosecha, consignación..." />
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>Monto</label>
-                  <input type="text" inputMode="numeric" value={formatInputAmount(bankTxAmount)} onChange={e => setBankTxAmount(parseInputAmount(e.target.value))} placeholder="$ 0" />
+                  <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px' }}>
+                    Monto
+                  </label>
+                  <input 
+                    type="text" inputMode="numeric" 
+                    value={formatInputAmount(bankTxAmount)} 
+                    onChange={e => setBankTxAmount(parseInputAmount(e.target.value))} 
+                    placeholder="$ 0" 
+                    style={{ fontSize: '1.4rem', fontWeight: '700' }}
+                  />
                 </div>
 
                 <button 
@@ -173,7 +343,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                       onAddBankTransaction({
                         amount: parseFloat(bankTxAmount),
                         type: bankTxType,
-                        description: bankTxDesc.trim() || (bankTxType === 'income' ? 'Ingreso' : 'Egreso'),
+                        description: bankTxDesc.trim() || (bankTxType === 'income' ? 'Ingreso Bancario' : 'Egreso Bancario'),
                         accountId: selectedBankId
                       });
                       setBankTxAmount('');
@@ -183,24 +353,30 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                     }
                   }}
                   disabled={!bankTxAmount}
-                  className="btn-primary" style={{ width: '100%', padding: '14px', opacity: !bankTxAmount ? 0.5 : 1 }}>
-                  Guardar Movimiento
+                  className="btn-primary" style={{ width: '100%', padding: '14px', opacity: !bankTxAmount ? 0.5 : 1 }}
+                >
+                  Confirmar Movimiento
                 </button>
               </div>
             )}
           </div>
         </div>
       )}
+
       {/* MODAL DE AJUSTE DE AHORROS */}
       {isSavingsModalOpen && (
         <div className="animate-fade" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          position: 'fixed', inset: 0,
           background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
         }}>
-          <div className="card" style={{ width: '100%', maxWidth: '360px', background: 'var(--bg-card)', border: '1px solid rgba(var(--primary-rgb), 0.2)' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '360px', background: '#12151c', border: '1px solid rgba(var(--primary-rgb), 0.25)', padding: '24px', borderRadius: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>💰 Ajustar Ahorros</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PiggyBank size={20} color="var(--primary)" />
+                <h3 style={{ fontSize: '1.2rem', color: 'white', fontWeight: '700' }}>Ajustar Ahorros</h3>
+              </div>
               <button onClick={() => setIsSavingsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
             </div>
 
@@ -215,7 +391,7 @@ const BalanceCard = ({ totalBalance, income, expenses, accounts = [], accountBal
                 value={formatInputAmount(savingsInput)} 
                 onChange={e => setSavingsInput(parseInputAmount(e.target.value))}
                 placeholder="$ 0"
-                style={{ fontSize: '1.5rem', fontWeight: '800', textAlign: 'center', color: 'var(--primary)' }}
+                style={{ fontSize: '1.6rem', fontWeight: '800', textAlign: 'center', color: 'var(--primary)' }}
                 autoFocus
               />
             </div>
