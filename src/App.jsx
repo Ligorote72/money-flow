@@ -278,8 +278,9 @@ function AppContent() {
           <p>{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <div className="header-actions">
-          <button onClick={() => setHideBalance(h => !h)} className="glass-btn">{hideBalance ? '👁️' : '🙈'}</button>
-          <button onClick={() => exportToCSV(transactions)} className="glass-btn">⬇️</button>
+          <button onClick={() => setHideBalance(h => !h)} className="glass-btn" title="Ocultar Saldo">{hideBalance ? '👁️' : '🙈'}</button>
+          <button onClick={() => exportToCSV(transactions)} className="glass-btn" title="Exportar CSV">⬇️</button>
+          <button onClick={() => { setActiveTab('varios'); setVariosTab('settings'); }} className="glass-btn" title="Ajustes y PIN">⚙️</button>
         </div>
       </header>
 
@@ -388,26 +389,42 @@ function AppContent() {
         {activeTab === 'varios' && (
           <div className="varios-section">
             {variosTab === 'menu' ? (
-              <div className="varios-grid">
-                {[
-                  { id: 'goals', label: 'Presupuesto', icon: '🎯', color: '#FF2D55' },
-                  { id: 'subs', label: 'Gastos Fijos', icon: '💳', color: '#007AFF' },
-                  { id: 'ahorro', label: 'Cochinitos', icon: '🐷', color: '#FF9500' },
-                  { id: 'debts', label: 'Deudas', icon: '🤝', color: '#34C759' },
-                  { id: 'minegocio', label: 'Mi Negocio', icon: '💼', color: 'var(--primary)' },
-                  { id: 'settings', label: 'Ajustes', icon: '⚙️', color: '#8e8e93' }
-                ].map(op => (
-                  <button key={op.id} onClick={() => setVariosTab(op.id)} className="menu-item" style={{ '--item-color': op.color }}>
-                    <div className="icon">{op.icon}</div>
-                    <span className="label">{op.label}</span>
-                  </button>
-                ))}
+              <div className="animate-fade">
+                <div style={{ padding: '0 16px 16px' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '800' }}>🎯 Planificación Financiera</h2>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                    Tus compromisos, deudas y metas en orden
+                  </p>
+                </div>
+
+                <div className="varios-grid">
+                  {[
+                    { id: 'debts', label: 'Deudas & Préstamos', desc: 'Lo que debes y te deben', icon: '🤝', color: '#34C759' },
+                    { id: 'ahorro', label: 'Cochinitos de Ahorro', desc: 'Alcancías y metas', icon: '🐷', color: '#FF9500' },
+                    { id: 'subs', label: 'Gastos Fijos', desc: 'Suscripciones y arriendos', icon: '💳', color: '#007AFF' },
+                    { id: 'goals', label: 'Presupuestos', desc: 'Límites de gasto del mes', icon: '🎯', color: '#FF2D55' },
+                  ].map(op => (
+                    <button key={op.id} onClick={() => setVariosTab(op.id)} className="menu-item" style={{ '--item-color': op.color, textAlign: 'left', alignItems: 'flex-start', padding: '20px 16px' }}>
+                      <div className="icon" style={{ marginBottom: '4px' }}>{op.icon}</div>
+                      <div>
+                        <span className="label" style={{ display: 'block', fontSize: '0.95rem' }}>{op.label}</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '3px', display: 'block' }}>{op.desc}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="animate-fade">
                 <div className="varios-header">
                   <button onClick={() => setVariosTab('menu')} className="back-btn">←</button>
-                  <h2>{variosTab.charAt(0).toUpperCase() + variosTab.slice(1)}</h2>
+                  <h2>
+                    {variosTab === 'debts' ? 'Deudas & Préstamos' :
+                     variosTab === 'ahorro' ? 'Cochinitos de Ahorro' :
+                     variosTab === 'subs' ? 'Gastos Fijos' :
+                     variosTab === 'goals' ? 'Presupuesto' :
+                     variosTab === 'minegocio' ? 'Mi Negocio / Finca' : 'Ajustes'}
+                  </h2>
                 </div>
                 {variosTab === 'goals' && <GoalsSection income={totalIncome} expenses={totalExpenses} goals={goals} onSaveGoals={setGoals} transactions={filteredTxs} />}
                 {variosTab === 'subs' && (
@@ -520,17 +537,17 @@ function AppContent() {
             <span className="dock-label">Finca</span>
           </button>
 
-          {/* Tab 4: Más / Ajustes */}
+          {/* Tab 4: Planes & Deudas */}
           <button 
             onClick={() => {
               setActiveTab('varios');
               setVariosTab('menu');
             }} 
-            className={`dock-item ${activeTab === 'varios' && variosTab !== 'minegocio' ? 'active' : ''}`}
-            title="Ajustes y Más"
+            className={`dock-item ${activeTab === 'varios' && variosTab !== 'minegocio' && variosTab !== 'settings' ? 'active' : ''}`}
+            title="Planificación y Deudas"
           >
             <SlidersHorizontal size={22} className="dock-icon" />
-            <span className="dock-label">Ajustes</span>
+            <span className="dock-label">Planes</span>
           </button>
         </nav>
       </div>
