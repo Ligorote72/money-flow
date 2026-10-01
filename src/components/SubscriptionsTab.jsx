@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { CATEGORIES } from '../data/categories';
+import React, { useState, useMemo } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { CATEGORIES, getCategoryById } from '../data/categories';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
+import { Calendar, Plus, Trash2, Edit2, CreditCard } from 'lucide-react';
 
-const SubscriptionsTab = ({ subscriptions, onAddSubscription, onDeleteSubscription, onUpdateSubscription, accounts }) => {
+const SubscriptionsTab = ({ subscriptions = [], onAddSubscription, onDeleteSubscription, onUpdateSubscription }) => {
+  const [parentList] = useAutoAnimate();
   const [editingSub, setEditingSub] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [menuOpenId, setMenuOpenId] = useState(null);
 
   // Form states
   const [name, setName] = useState('');
@@ -16,21 +18,22 @@ const SubscriptionsTab = ({ subscriptions, onAddSubscription, onDeleteSubscripti
 
   const handleCreateOrUpdate = (e) => {
     e.preventDefault();
-    if (!name || !amount) return;
+    if (!name.trim() || !amount) return;
 
     const data = {
-      name,
+      name: name.trim(),
       amount: parseFloat(amount),
       category,
       accountId,
-      day: parseInt(day),
+      day: parseInt(day) || 1,
       lastProcessed: editingSub ? editingSub.lastProcessed : null
     };
 
     if (editingSub) {
       onUpdateSubscription(editingSub.id, data);
     } else {
-      onAddSubscription({ ...data, id: Date.now().toString() });
+      const newId = String(Date.now());
+      onAddSubscription({ ...data, id: newId });
     }
 
     resetForm();
@@ -58,123 +61,163 @@ const SubscriptionsTab = ({ subscriptions, onAddSubscription, onDeleteSubscripti
   };
 
   const confirmDelete = (id) => {
-    if (window.confirm('¿Eliminar esta suscripción?')) {
+    if (window.confirm('¿Eliminar esta suscripción o gasto fijo?')) {
       onDeleteSubscription(id);
       setMenuOpenId(null);
     }
   };
 
+  const totalMonthlyCommitment = useMemo(() => {
+    return subscriptions.reduce((a, b) => a + (b.amount || 0), 0);
+  }, [subscriptions]);
+
   return (
     <div className="animate-fade">
+      {/* Resumen Mensual Comprometido */}
+      <div 
+        className="card" 
+        style={{ 
+          margin: '0 16px 16px', padding: '18px 20px', 
+          background: 'linear-gradient(135deg, rgba(0,122,255,0.12) 0%, rgba(0,0,0,0.3) 100%)', 
+          border: '1px solid rgba(0,122,255,0.25)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+        }}
+      >
+        <div>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase' }}>
+            Compromiso Mensual Fijo
+          </span>
+          <p style={{ fontSize: '1.4rem', fontWeight: '900', color: '#007aff', margin: '2px 0 0' }}>
+            {formatCurrency(totalMonthlyCommitment)}
+          </p>
+        </div>
+        <button 
+          onClick={() => setShowForm(true)} 
+          className="btn-primary" 
+          style={{ padding: '10px 18px', fontSize: '0.85rem' }}
+        >
+          + Agregar Fijo
+        </button>
+      </div>
+
       {showForm && (
         <div className="modal-overlay">
           <div className="modal-container">
             <div className="modal-header">
-              <h2>{editingSub ? 'Editar' : 'Nueva'} Suscripción</h2>
+              <h2>{editingSub ? 'Editar' : 'Nueva'} Suscripción / Gasto Fijo</h2>
               <button onClick={resetForm}>×</button>
             </div>
             <form onSubmit={handleCreateOrUpdate} style={{ padding: '0 20px' }}>
-              <input type="text" placeholder="Nombre (Netflix, Gym...)" value={name} onChange={e => setName(e.target.value)} required />
+              <input type="text" placeholder="Nombre (Ej: Netflix, Internet, Arriendo...)" value={name} onChange={e => setName(e.target.value)} required />
               
               <div style={{ marginTop: '12px' }}>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
-                  Monto mensual
-                  {amount && <span style={{ color: 'var(--primary)' }}>{formatCurrency(parseFloat(amount))}</span>}
+                  Costo Mensual
+                  {amount && <span style={{ color: 'var(--primary)', fontWeight: '700' }}>{formatCurrency(parseFloat(amount))}</span>}
                 </label>
-                <input type="text" inputMode="numeric" placeholder="Monto" 
+                <input type="text" inputMode="numeric" placeholder="$ 0" 
                   value={formatInputAmount(amount)} 
                   onChange={e => setAmount(parseInputAmount(e.target.value))} 
-                  required />
+                  required 
+                  style={{ fontSize: '1.3rem', fontWeight: '800', textAlign: 'center' }}
+                />
               </div>
 
               <div style={{ marginTop: '12px' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Día de cobro (1-31)</label>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Día de cobro o corte (1 al 31)</label>
                 <input type="number" min="1" max="31" value={day} onChange={e => setDay(e.target.value)} required />
               </div>
 
-              <div style={{ marginTop: '16px' }}>
+              <div style={{ marginTop: '14px' }}>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'block', marginBottom: '8px' }}>Categoría</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                  {CATEGORIES.filter(c => c.id !== 'salary' && c.id !== 'freelance' && c.id !== 'savings').map(cat => (
+                  {CATEGORIES.filter(c => !['salary','freelance','savings'].includes(c.id)).slice(0, 6).map(cat => (
                     <button
                       key={cat.id} type="button" onClick={() => setCategory(cat.id)}
                       style={{
-                        padding: '8px', borderRadius: '8px', fontSize: '0.7rem',
-                        border: `1px solid ${category === cat.id ? cat.color : 'rgba(255,255,255,0.1)'}`,
-                        background: category === cat.id ? `${cat.color}22` : 'transparent',
-                        color: category === cat.id ? cat.color : 'var(--text-dim)',
-                        cursor: 'pointer', textAlign: 'center'
+                        padding: '10px 4px', borderRadius: '12px', border: '1px solid',
+                        background: category === cat.id ? 'rgba(var(--primary-rgb), 0.2)' : 'rgba(255,255,255,0.04)',
+                        borderColor: category === cat.id ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
+                        color: category === cat.id ? 'var(--primary)' : 'white',
+                        fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
                       }}
                     >
-                      {cat.icon} {cat.label}
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div style={{ marginTop: '16px', marginBottom: '24px' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'block', marginBottom: '8px' }}>Cuenta de pago</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {accounts.map(acc => (
-                    <button
-                      key={acc.id} type="button" onClick={() => setAccountId(acc.id)}
-                      style={{
-                        flex: 1, padding: '10px', borderRadius: '8px', fontSize: '0.75rem',
-                        border: `1px solid ${accountId === acc.id ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}`,
-                        background: accountId === acc.id ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
-                        color: accountId === acc.id ? 'var(--primary)' : 'var(--text-dim)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {acc.icon} {acc.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button type="submit" className="btn-primary" style={{ width: '100%', padding: '16px' }}>
-                {editingSub ? 'Guardar Cambios' : 'Crear Suscripción'}
+              <button type="submit" className="btn-primary" style={{ width: '100%', padding: '16px', marginTop: '22px' }}>
+                {editingSub ? 'Guardar Cambios' : 'Registrar Gasto Fijo 💳'}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      <div className="varios-grid">
-        {subscriptions.map(sub => {
-          const cat = CATEGORIES.find(c => c.id === sub.category);
-          return (
-            <div key={sub.id} className="menu-item" style={{ '--item-color': 'rgba(255,255,255,0.05)', position: 'relative', height: 'auto', minHeight: '160px', padding: '16px' }}>
-              <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === sub.id ? null : sub.id); }}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.2rem', cursor: 'pointer', padding: '4px' }}
-                >⋮</button>
-                {menuOpenId === sub.id && (
-                  <div className="card" style={{ position: 'absolute', right: 0, top: '30px', padding: '4px', minWidth: '100px', zIndex: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                    <button onClick={(e) => { e.stopPropagation(); startEdit(sub); }} style={{ background: 'none', border: 'none', color: 'white', width: '100%', textAlign: 'left', padding: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>✏️ Editar</button>
-                    <button onClick={(e) => { e.stopPropagation(); confirmDelete(sub.id); }} style={{ background: 'none', border: 'none', color: '#ff3b30', width: '100%', textAlign: 'left', padding: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>🗑️ Borrar</button>
+      {/* Lista de Suscripciones */}
+      <div ref={parentList} style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '0 16px' }}>
+        {subscriptions.length === 0 ? (
+          <p style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '36px 0', fontSize: '0.85rem' }}>
+            No tienes suscripciones o gastos fijos registrados.
+          </p>
+        ) : (
+          subscriptions.map(sub => {
+            const cat = getCategoryById(sub.category);
+            const today = new Date().getDate();
+            const daysLeft = sub.day >= today ? (sub.day - today) : (30 - today + sub.day);
+
+            return (
+              <div 
+                key={sub.id} 
+                className="card" 
+                style={{ 
+                  margin: 0, padding: '14px 16px', borderRadius: '18px', 
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ 
+                    width: '42px', height: '42px', borderRadius: '14px', 
+                    background: `${cat.color}15`, border: `1px solid ${cat.color}35`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' 
+                  }}>
+                    {cat.icon}
                   </div>
-                )}
+                  <div>
+                    <p style={{ fontWeight: '800', fontSize: '0.94rem' }}>{sub.name}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '6px' }}>
+                        Día {sub.day} de cada mes
+                      </span>
+                      <span style={{ fontSize: '0.68rem', color: daysLeft <= 3 ? '#ff9500' : 'var(--text-muted)', fontWeight: '600' }}>
+                        {daysLeft === 0 ? '¡Cobra hoy!' : `en ${daysLeft} días`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  <span style={{ color: 'var(--expense)', fontWeight: '900', fontSize: '1.05rem' }}>
+                    -{formatCurrency(sub.amount)}
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => startEdit(sub)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
+                      <Edit2 size={13} />
+                    </button>
+                    <button onClick={() => confirmDelete(sub.id)} style={{ background: 'none', border: 'none', color: 'rgba(255,59,48,0.4)', cursor: 'pointer', padding: '2px' }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
               </div>
-
-              <div className="icon" style={{ background: `${cat?.color || '#eee'}1a`, color: cat?.color || 'white', fontSize: '1.8rem', marginBottom: '8px' }}>{cat?.icon || '💳'}</div>
-              <span className="label" style={{ textAlign: 'center', fontSize: '0.9rem' }}>{sub.name}</span>
-              <p style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--expense)', margin: '4px 0' }}>-{formatCurrency(sub.amount)}</p>
-              <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>Día {sub.day}</p>
-            </div>
-          );
-        })}
-
-        <button className="menu-item" onClick={() => setShowForm(true)} style={{ '--item-color': 'rgba(255,255,255,0.03)', borderStyle: 'dashed', minHeight: '160px' }}>
-          <div className="icon" style={{ background: 'none', border: '2px dashed var(--glass-border)', fontSize: '1.5rem', opacity: 0.5 }}>+</div>
-          <span className="label" style={{ opacity: 0.5 }}>Nueva</span>
-        </button>
+            );
+          })
+        )}
       </div>
-
-      {subscriptions.length === 0 && !showForm && (
-        <p style={{ textAlign: 'center', padding: '20px', color: 'var(--text-dim)', fontSize: '0.85rem' }}>No tienes gastos fijos aún.</p>
-      )}
     </div>
   );
 };

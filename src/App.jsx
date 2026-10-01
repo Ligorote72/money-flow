@@ -28,7 +28,11 @@ import {
   SlidersHorizontal, 
   ArrowUpRight, 
   ArrowDownLeft, 
-  ReceiptText 
+  ArrowLeftRight,
+  ReceiptText,
+  Search,
+  X,
+  Sparkles
 } from 'lucide-react';
 
 const ACCOUNTS = [
@@ -81,6 +85,15 @@ function AppContent() {
     deleteBank,
   } = useFinanceData();
 
+  // Dynamic greeting by hour
+  const currentHour = now.getHours();
+  const greetingText = currentHour < 12 
+    ? 'Buenos días' 
+    : currentHour < 18 
+      ? 'Buenas tardes' 
+      : 'Buenas noches';
+  const greetingIcon = currentHour < 12 ? '☀️' : currentHour < 18 ? '🌤️' : '🌙';
+
   // PWA & Landing Page logic
   const [showLanding, setShowLanding] = useState(() => {
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return false;
@@ -118,7 +131,7 @@ function AppContent() {
       ...txData,
       id: Date.now().toString(),
       date: new Date().toISOString(),
-      category: 'Otros'
+      category: 'other_expense'
     });
   };
 
@@ -150,21 +163,6 @@ function AppContent() {
       accountId: 'cash',
       date: new Date().toISOString()
     });
-  };
-
-  const togglePaid = (id) => {
-    const debt = debts.find(d => d.id === id);
-    if (!debt) return;
-    if (!debt.paid) {
-      addTransaction({
-        id: Date.now() + 1,
-        description: `Pago total: ${debt.person}`,
-        amount: debt.amount,
-        type: 'expense',
-        category: debt.type === 'owe' ? 'other_expense' : 'savings',
-        date: new Date().toISOString()
-      });
-    }
   };
 
   // Filtered Transactions
@@ -234,17 +232,27 @@ function AppContent() {
     return reminders.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [subscriptions]);
 
-  if (loading) return <div className="loader">Cargando...</div>;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '14px' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '3px solid rgba(var(--primary-rgb), 0.2)', borderTopColor: 'var(--primary)', animation: 'spin 0.8s linear infinite' }} />
+        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', fontWeight: '600' }}>Cargando MoneyFlow...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
   if (showLanding) return <LandingPage onInstallClick={() => {}} installPromptReady={!!deferredPrompt} onSkip={() => setShowLanding(false)} />;
   if (!session) return <Login />;
   if (isLocked) return <PinLockScreen onUnlock={() => setIsLocked(false)} onLogout={handleSignOut} />;
 
   return (
     <div className={`app-container ${hideBalance ? 'hide-balance' : ''}`}>
+      {/* Top Header */}
       <header className="app-header">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h1>{username ? `Hola, ${username}` : 'MoneyFlow'}</h1>
+            <h1>{greetingIcon} {username ? `${greetingText}, ${username}` : 'MoneyFlow'}</h1>
             {session ? (
               <span title="Sincronizado con Supabase Cloud" style={{
                 fontSize: '0.68rem',
@@ -252,23 +260,23 @@ function AppContent() {
                 color: '#34c759',
                 padding: '2px 8px',
                 borderRadius: '12px',
-                fontWeight: '600',
+                fontWeight: '700',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px',
                 border: '1px solid rgba(52,199,89,0.3)'
               }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34c759', display: 'inline-block' }}></span>
-                Cloud Sync
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34c759', display: 'inline-block', boxShadow: '0 0 6px #34c759' }}></span>
+                Cloud
               </span>
             ) : (
-              <span title="Modo local sin conexión remota" style={{
+              <span title="Modo local" style={{
                 fontSize: '0.68rem',
                 background: 'rgba(255,149,0,0.15)',
                 color: '#ff9500',
                 padding: '2px 8px',
                 borderRadius: '12px',
-                fontWeight: '600',
+                fontWeight: '700',
                 border: '1px solid rgba(255,149,0,0.3)'
               }}>
                 💾 Local
@@ -299,10 +307,10 @@ function AppContent() {
           <div className="quick-actions-bar animate-fade">
             <button 
               className="quick-action-btn"
-              onClick={() => setActiveTab('add_modal')}
+              onClick={() => startEditing({ type: 'income' })}
               title="Registrar Ingreso"
             >
-              <div className="quick-action-icon" style={{ background: 'rgba(52, 199, 89, 0.15)', color: '#34c759' }}>
+              <div className="quick-action-icon" style={{ background: 'rgba(52, 199, 89, 0.16)', color: '#34c759' }}>
                 <ArrowDownLeft size={20} />
               </div>
               <span className="quick-action-label">+ Ingreso</span>
@@ -310,13 +318,24 @@ function AppContent() {
 
             <button 
               className="quick-action-btn"
-              onClick={() => setActiveTab('add_modal')}
+              onClick={() => startEditing({ type: 'expense' })}
               title="Registrar Gasto"
             >
-              <div className="quick-action-icon" style={{ background: 'rgba(255, 59, 48, 0.15)', color: '#ff3b30' }}>
+              <div className="quick-action-icon" style={{ background: 'rgba(255, 59, 48, 0.16)', color: '#ff3b30' }}>
                 <ArrowUpRight size={20} />
               </div>
               <span className="quick-action-label">- Gasto</span>
+            </button>
+
+            <button 
+              className="quick-action-btn"
+              onClick={() => startEditing({ type: 'transfer' })}
+              title="Transferir entre cuentas"
+            >
+              <div className="quick-action-icon" style={{ background: 'rgba(0, 122, 255, 0.16)', color: '#007aff' }}>
+                <ArrowLeftRight size={19} />
+              </div>
+              <span className="quick-action-label">Traspaso</span>
             </button>
 
             <button 
@@ -327,24 +346,10 @@ function AppContent() {
               }}
               title="Cosecha y Finca Cafetera"
             >
-              <div className="quick-action-icon" style={{ background: 'rgba(196, 251, 109, 0.15)', color: '#c4fb6d' }}>
+              <div className="quick-action-icon" style={{ background: 'rgba(196, 251, 109, 0.16)', color: '#c4fb6d' }}>
                 <Coffee size={20} />
               </div>
-              <span className="quick-action-label">Cosecha @</span>
-            </button>
-
-            <button 
-              className="quick-action-btn"
-              onClick={() => {
-                setActiveTab('varios');
-                setVariosTab('minegocio');
-              }}
-              title="Recibos y Liquidación WhatsApp"
-            >
-              <div className="quick-action-icon" style={{ background: 'rgba(0, 122, 255, 0.15)', color: '#007aff' }}>
-                <ReceiptText size={20} />
-              </div>
-              <span className="quick-action-label">Recibos</span>
+              <span className="quick-action-label">Finca @</span>
             </button>
           </div>
         </>
@@ -359,56 +364,91 @@ function AppContent() {
                   <div key={p.id} className="payment-card">
                     <p>{p.title}</p>
                     <strong>{formatCurrency(p.amount)}</strong>
-                    <span>{p.daysLeft === 0 ? 'Hoy' : p.daysLeft === 1 ? 'Mañana' : `En ${p.daysLeft} d`}</span>
+                    <span>{p.daysLeft === 0 ? '¡Hoy!' : p.daysLeft === 1 ? 'Mañana' : `En ${p.daysLeft} d`}</span>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Barra de Búsqueda y Filtro de Rango */}
             <div className="search-bar">
-              <input type="text" placeholder="Buscar movimientos..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-              <button onClick={() => setIsGlobalSearch(!isGlobalSearch)} className={isGlobalSearch ? 'active' : ''}>
-                {isGlobalSearch ? '🌎 Global' : '📅 Mes'}
+              <div className="search-input-wrapper">
+                <input 
+                  type="text" 
+                  placeholder="Buscar movimientos (ej: mercado, café...)" 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)} 
+                />
+                {searchQuery && (
+                  <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <button 
+                onClick={() => setIsGlobalSearch(!isGlobalSearch)} 
+                className={`filter-btn ${isGlobalSearch ? 'active' : ''}`}
+                title={isGlobalSearch ? "Buscando en todo el historial" : "Buscando en el mes actual"}
+              >
+                {isGlobalSearch ? '🌎 Todo' : '📅 Este Mes'}
               </button>
             </div>
             
             <WeeklySummary transactions={transactions} />
+
             <TransactionList 
               transactions={filteredTxs} 
               onEdit={startEditing} 
               onDelete={deleteTransaction} 
               hideBalance={hideBalance} 
               banks={banks} 
+              searchQuery={searchQuery}
+              onQuickAdd={() => startEditing({ type: 'expense' })}
             />
           </div>
         )}
 
         {activeTab === 'analysis' && (
-          <AnalysisBreakdown transactions={transactions} filterMonth={filterMonth} filterYear={filterYear} dateFilterType={dateFilterType} startDate={startDate} endDate={endDate} />
+          <AnalysisBreakdown 
+            transactions={transactions} 
+            filterMonth={filterMonth} 
+            filterYear={filterYear} 
+            dateFilterType={dateFilterType} 
+            startDate={startDate} 
+            endDate={endDate} 
+          />
         )}
 
         {activeTab === 'varios' && (
           <div className="varios-section">
             {variosTab === 'menu' ? (
               <div className="animate-fade">
-                <div style={{ padding: '0 16px 16px' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '800' }}>🎯 Planificación Financiera</h2>
+                <div style={{ padding: '0 16px 14px' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '900' }}>🎯 Planificación Financiera</h2>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                    Tus compromisos, deudas y metas en orden
+                    Control de deudas, metas, suscripciones y fincas
                   </p>
                 </div>
 
                 <div className="varios-grid">
                   {[
                     { id: 'debts', label: 'Deudas & Préstamos', desc: 'Lo que debes y te deben', icon: '🤝', color: '#34C759' },
-                    { id: 'ahorro', label: 'Cochinitos de Ahorro', desc: 'Alcancías y metas', icon: '🐷', color: '#FF9500' },
+                    { id: 'ahorro', label: 'Cochinitos de Ahorro', desc: 'Metas y alcancías', icon: '🐷', color: '#FF9500' },
                     { id: 'subs', label: 'Gastos Fijos', desc: 'Suscripciones y arriendos', icon: '💳', color: '#007AFF' },
                     { id: 'goals', label: 'Presupuestos', desc: 'Límites de gasto del mes', icon: '🎯', color: '#FF2D55' },
+                    { id: 'minegocio', label: 'Mi Finca / Negocio', desc: 'Cosecha, báscula y jornales', icon: '☕', color: '#c4fb6d' },
+                    { id: 'settings', label: 'Ajustes & Seguridad', desc: 'Temas, PIN y biometría', icon: '⚙️', color: '#8e8e93' },
                   ].map(op => (
-                    <button key={op.id} onClick={() => setVariosTab(op.id)} className="menu-item" style={{ '--item-color': op.color, textAlign: 'left', alignItems: 'flex-start', padding: '20px 16px' }}>
-                      <div className="icon" style={{ marginBottom: '4px' }}>{op.icon}</div>
+                    <button 
+                      key={op.id} 
+                      onClick={() => setVariosTab(op.id)} 
+                      className="menu-item" 
+                      style={{ '--item-color': op.color }}
+                    >
+                      <div className="icon">{op.icon}</div>
                       <div>
-                        <span className="label" style={{ display: 'block', fontSize: '0.95rem' }}>{op.label}</span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '3px', display: 'block' }}>{op.desc}</span>
+                        <span className="label" style={{ display: 'block' }}>{op.label}</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px', display: 'block' }}>{op.desc}</span>
                       </div>
                     </button>
                   ))}
@@ -422,11 +462,21 @@ function AppContent() {
                     {variosTab === 'debts' ? 'Deudas & Préstamos' :
                      variosTab === 'ahorro' ? 'Cochinitos de Ahorro' :
                      variosTab === 'subs' ? 'Gastos Fijos' :
-                     variosTab === 'goals' ? 'Presupuesto' :
-                     variosTab === 'minegocio' ? 'Mi Negocio / Finca' : 'Ajustes'}
+                     variosTab === 'goals' ? 'Presupuesto Mensual' :
+                     variosTab === 'minegocio' ? 'Mi Negocio / Finca' : 'Ajustes y Configuración'}
                   </h2>
                 </div>
-                {variosTab === 'goals' && <GoalsSection income={totalIncome} expenses={totalExpenses} goals={goals} onSaveGoals={setGoals} transactions={filteredTxs} />}
+
+                {variosTab === 'goals' && (
+                  <GoalsSection 
+                    income={totalIncome} 
+                    expenses={totalExpenses} 
+                    goals={goals} 
+                    onSaveGoals={setGoals} 
+                    transactions={filteredTxs} 
+                  />
+                )}
+
                 {variosTab === 'subs' && (
                   <SubscriptionsTab 
                     subscriptions={subscriptions} 
@@ -436,6 +486,7 @@ function AppContent() {
                     accounts={ACCOUNTS} 
                   />
                 )}
+
                 {variosTab === 'ahorro' && (
                   <PiggyBankTab 
                     piggyBanks={piggyBanks} 
@@ -446,6 +497,7 @@ function AppContent() {
                     onUpdatePiggy={updatePiggyBank} 
                   />
                 )}
+
                 {variosTab === 'debts' && (
                   <DebtsTab 
                     debts={debts} 
@@ -456,6 +508,7 @@ function AppContent() {
                     onPartialPayment={partialPaymentDebt}
                   />
                 )}
+
                 {variosTab === 'minegocio' && (
                   isBusinessUnlocked ? (
                     <BusinessDashboard 
@@ -473,6 +526,7 @@ function AppContent() {
                     <BusinessGate onAccessGranted={() => setIsBusinessUnlocked(true)} />
                   )
                 )}
+
                 {variosTab === 'settings' && <SettingsTab onSignOut={handleSignOut} />}
               </div>
             )}
@@ -480,14 +534,21 @@ function AppContent() {
         )}
       </main>
 
+      {/* Modal de Transacción (Nuevo / Editar) */}
       {(activeTab === 'add_modal' || editingTransaction) && (
         <div className="modal-overlay">
           <div className="modal-container">
             <div className="modal-header">
-              <h2>{editingTransaction ? 'Editar' : 'Nuevo'} Movimiento</h2>
+              <h2>{editingTransaction?.id ? 'Editar Movimiento' : 'Nuevo Movimiento'}</h2>
               <button onClick={cancelEditing}>×</button>
             </div>
-            <TransactionForm onAddTransaction={handleAddTransaction} editingData={editingTransaction} onCancelEdit={cancelEditing} accounts={ACCOUNTS} banks={banks} />
+            <TransactionForm 
+              onAddTransaction={handleAddTransaction} 
+              editingData={editingTransaction} 
+              onCancelEdit={cancelEditing} 
+              accounts={ACCOUNTS} 
+              banks={banks} 
+            />
           </div>
         </div>
       )}
@@ -517,7 +578,7 @@ function AppContent() {
 
           {/* Center Elevated Action Button: (+) */}
           <button 
-            onClick={() => setActiveTab('add_modal')} 
+            onClick={() => startEditing({ type: 'expense' })} 
             className="dock-center-fab"
             title="Nuevo Movimiento"
           >
@@ -543,7 +604,7 @@ function AppContent() {
               setActiveTab('varios');
               setVariosTab('menu');
             }} 
-            className={`dock-item ${activeTab === 'varios' && variosTab !== 'minegocio' && variosTab !== 'settings' ? 'active' : ''}`}
+            className={`dock-item ${activeTab === 'varios' && variosTab !== 'minegocio' ? 'active' : ''}`}
             title="Planificación y Deudas"
           >
             <SlidersHorizontal size={22} className="dock-icon" />

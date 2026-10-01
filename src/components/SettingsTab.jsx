@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSettings, THEMES } from '../context/SettingsContext';
 import { hasLocalPin, savePinLocally, clearLocalPin, verifyPin } from '../utils/crypto';
 import { isBiometricsSupported, hasLocalBiometrics, registerBiometrics, clearLocalBiometrics } from '../utils/biometrics';

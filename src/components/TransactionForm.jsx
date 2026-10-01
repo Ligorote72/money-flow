@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../data/categories';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Calendar, Landmark, Wallet, Check } from 'lucide-react';
 
 const INCOME_CATEGORIES  = CATEGORIES.filter(c => ['salary','freelance','other_income','savings'].includes(c.id));
 const EXPENSE_CATEGORIES = CATEGORIES.filter(c => !['salary','freelance','other_income'].includes(c.id));
 
-const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = null, accounts = [], banks = [] }) => {
+const QUICK_AMOUNTS = [10000, 20000, 50000, 100000, 200000, 500000];
+
+const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = null, banks = [] }) => {
   const [description, setDescription] = useState('');
   const [amount,      setAmount]      = useState('');
   const [type,        setType]        = useState('expense');
@@ -14,12 +17,22 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
   const [bankId,      setBankId]      = useState('general');
   const [toAccountId, setToAccountId] = useState('bank');
   const [toBankId,    setToBankId]    = useState('general');
+  const [date,        setDate]        = useState(new Date().toISOString().slice(0, 16));
 
-  // Sincronizar con datos de edición si llegan
+  const resetForm = () => {
+    setDescription('');
+    setAmount('');
+    setType('expense');
+    setCategory('food');
+    setAccountId('cash');
+    setBankId('general');
+    setDate(new Date().toISOString().slice(0, 16));
+  };
+
   useEffect(() => {
     if (editingData) {
       setDescription(editingData.description || '');
-      setAmount(editingData.amount.toString() || '');
+      setAmount(editingData.amount ? editingData.amount.toString() : '');
       setType(editingData.type || 'expense');
       setCategory(editingData.category || 'other_expense');
       setAccountId(editingData.accountId?.startsWith('bank_') || editingData.accountId === 'general' ? 'bank' : editingData.accountId || 'cash');
@@ -32,6 +45,14 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
           setToBankId(editingData.toAccountId);
         }
       }
+      if (editingData.date) {
+        try {
+          const d = new Date(editingData.date);
+          setDate(d.toISOString().slice(0, 16));
+        } catch {
+          setDate(new Date().toISOString().slice(0, 16));
+        }
+      }
     } else {
       resetForm();
     }
@@ -42,22 +63,19 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
   const handleTypeChange = (newType) => {
     setType(newType);
     if (newType !== 'transfer') {
-      setCategory(newType === 'income' ? 'other_income' : 'other_expense');
+      setCategory(newType === 'income' ? 'salary' : 'food');
     }
   };
 
-  const resetForm = () => {
-    setDescription('');
-    setAmount('');
-    setType('expense');
-    setCategory('other_expense');
-    setAccountId('cash');
-    setBankId('general');
+  const handleQuickAddAmount = (addVal) => {
+    const current = parseFloat(amount) || 0;
+    const next = current + addVal;
+    setAmount(next.toString());
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!amount) return;
+    if (!amount || parseFloat(amount) <= 0) return;
 
     const selectedLabel = CATEGORIES.find(c => c.id === category)?.label || 'Movimiento';
     
@@ -69,61 +87,58 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
       category: type === 'transfer' ? 'transfer' : category,
       accountId: accountId === 'bank' ? bankId : accountId,
       toAccountId: type === 'transfer' ? (toAccountId === 'bank' ? toBankId : toAccountId) : null,
-      date: editingData ? editingData.date : new Date().toISOString()
+      date: date ? new Date(date).toISOString() : new Date().toISOString()
     });
 
     if (!editingData) resetForm();
   };
 
   return (
-    <div className="card animate-fade" style={{ marginTop: '0' }}>
-      <h3 style={{ marginBottom: '16px' }}>
-        {editingData ? '📝 Editar Transacción' : '✨ Nueva Transacción'}
-      </h3>
-
-      {/* Toggle tipo */}
+    <div className="card animate-fade" style={{ margin: 0, padding: '20px', borderRadius: '24px' }}>
+      {/* Selector de Tipo (Gasto | Ingreso | Traspaso) */}
       <div style={{
-        display: 'flex', gap: '8px',
+        display: 'flex', gap: '6px',
         background: 'rgba(255,255,255,0.05)',
-        borderRadius: '14px', padding: '4px', marginBottom: '16px'
+        borderRadius: '16px', padding: '4px', marginBottom: '20px'
       }}>
-        {['expense','income','transfer'].map(t => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => handleTypeChange(t)}
-            style={{
-              flex: 1, padding: '10px', border: 'none', borderRadius: '10px',
-              cursor: 'pointer', fontWeight: '600', fontSize: '0.8rem',
-              transition: 'all 0.2s ease',
-              background: type === t
-                ? (t === 'income' ? 'rgba(52,199,89,0.22)' : t === 'expense' ? 'rgba(255,59,48,0.22)' : 'rgba(0,122,255,0.22)')
-                : 'transparent',
-              color: type === t
-                ? (t === 'income' ? 'var(--income)' : t === 'expense' ? 'var(--expense)' : 'var(--primary)')
-                : 'var(--text-dim)',
-            }}
-          >
-            {t === 'income' ? '↑ Ingreso' : t === 'expense' ? '↓ Gasto' : '🔄 Traspaso'}
-          </button>
-        ))}
+        {[
+          { id: 'expense', label: 'Gasto', icon: <ArrowUpRight size={16} />, color: 'var(--expense)' },
+          { id: 'income', label: 'Ingreso', icon: <ArrowDownLeft size={16} />, color: 'var(--income)' },
+          { id: 'transfer', label: 'Traspaso', icon: <ArrowLeftRight size={16} />, color: '#007aff' }
+        ].map(t => {
+          const isActive = type === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => handleTypeChange(t.id)}
+              style={{
+                flex: 1, padding: '12px 8px', borderRadius: '12px',
+                cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                background: isActive ? `${t.color}25` : 'transparent',
+                color: isActive ? t.color : 'var(--text-dim)',
+                border: isActive ? `1px solid ${t.color}50` : '1px solid transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+              }}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Descripción <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>(opcional)</span></label>
-          <input
-            type="text"
-            placeholder="Ej: Almuerzo, Salario..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
-            Monto 
-            {amount && <span style={{ color: 'var(--primary)', fontWeight: '600' }}>{formatCurrency(parseFloat(amount))}</span>}
+        {/* Input Monto Principal */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
+            Monto a registrar
+            {amount && parseFloat(amount) > 0 && (
+              <span style={{ color: 'var(--primary)', fontWeight: '700' }}>
+                {formatCurrency(parseFloat(amount))}
+              </span>
+            )}
           </label>
           <input
             type="text"
@@ -132,128 +147,220 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
             value={formatInputAmount(amount)}
             onChange={(e) => setAmount(parseInputAmount(e.target.value))}
             required
-            style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.02em' }}
+            autoFocus
+            style={{ 
+              fontSize: '1.8rem', fontWeight: '800', 
+              color: type === 'income' ? 'var(--income)' : (type === 'expense' ? 'var(--expense)' : 'white'), 
+              letterSpacing: '-0.02em', textAlign: 'center', padding: '18px 14px' 
+            }}
           />
         </div>
 
+        {/* Chips de monto rápido */}
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginBottom: '18px', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+          {QUICK_AMOUNTS.map(amt => (
+            <button
+              key={amt}
+              type="button"
+              onClick={() => handleQuickAddAmount(amt)}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.04)',
+                color: 'var(--text-dim)',
+                fontSize: '0.72rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              +{formatCurrency(amt)}
+            </button>
+          ))}
+        </div>
+
+        {/* Input Descripción */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600' }}>
+            Concepto / Descripción <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(opcional)</span>
+          </label>
+          <input
+            type="text"
+            placeholder={type === 'income' ? 'Ej: Salario quincena, Venta café...' : 'Ej: Almuerzo, Mercado, Combustible...'}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+
+        {/* Selector de Categorías (para Ingreso o Gasto) */}
         {type !== 'transfer' && (
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', display: 'block', marginBottom: '8px' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
               Categoría
             </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {categoryList.map(cat => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    setCategory(cat.id);
-                    if (cat.id === 'savings') setAccountId('savings');
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '10px',
-                    border: `1px solid ${category === cat.id ? cat.color : 'rgba(255,255,255,0.1)'}`,
-                    background: category === cat.id ? `${cat.color}22` : 'transparent',
-                    color: category === cat.id ? cat.color : 'var(--text-dim)',
-                    cursor: 'pointer',
-                    fontSize: '0.78rem',
-                    fontWeight: category === cat.id ? '600' : '400',
-                    transition: 'all 0.2s ease',
-                    display: 'flex', alignItems: 'center', gap: '4px'
-                  }}
-                >
-                  {cat.icon} {cat.label}
-                </button>
-              ))}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(4, 1fr)', 
+              gap: '8px',
+              maxHeight: '180px',
+              overflowY: 'auto',
+              padding: '2px'
+            }}>
+              {categoryList.map(cat => {
+                const isSelected = category === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCategory(cat.id)}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                      padding: '10px 4px', borderRadius: '14px', border: '1px solid',
+                      background: isSelected ? `${cat.color}25` : 'rgba(255,255,255,0.03)',
+                      borderColor: isSelected ? cat.color : 'rgba(255,255,255,0.07)',
+                      cursor: 'pointer', transition: 'all 0.18s ease'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.3rem' }}>{cat.icon}</span>
+                    <span style={{ 
+                      fontSize: '0.68rem', fontWeight: isSelected ? '700' : '500', 
+                      color: isSelected ? 'white' : 'var(--text-dim)',
+                      textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' 
+                    }}>
+                      {cat.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', display: 'block', marginBottom: '8px' }}>
-            {type === 'transfer' ? 'Cuenta Origen' : 'Cuenta / Bolsillo'}
+        {/* Cuenta Origen */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+            {type === 'transfer' ? 'Desde (Cuenta Origen)' : 'Cuenta / Método'}
           </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {accounts.map(acc => (
-              <button
-                key={acc.id}
-                type="button"
-                onClick={() => setAccountId(acc.id)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  border: `1px solid ${accountId === acc.id ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}`,
-                  background: accountId === acc.id ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
-                  color: accountId === acc.id ? 'var(--primary)' : 'var(--text-dim)',
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  fontWeight: accountId === acc.id ? '600' : '400',
-                  transition: 'all 0.2s ease',
-                  display: 'flex', alignItems: 'center', gap: '4px'
-                }}
-              >
-                {acc.icon} {acc.label}
-              </button>
-            ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            {[
+              { id: 'cash', label: 'Efectivo', icon: '💵' },
+              { id: 'bank', label: 'Banco', icon: '🏛️' },
+              { id: 'savings', label: 'Ahorro', icon: '🐷' }
+            ].map(acc => {
+              const isSelected = accountId === acc.id;
+              return (
+                <button
+                  key={acc.id}
+                  type="button"
+                  onClick={() => setAccountId(acc.id)}
+                  style={{
+                    padding: '10px', borderRadius: '12px', border: '1px solid',
+                    background: isSelected ? 'rgba(var(--primary-rgb), 0.15)' : 'rgba(255,255,255,0.03)',
+                    borderColor: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
+                    color: isSelected ? 'white' : 'var(--text-dim)',
+                    fontWeight: isSelected ? '700' : '500',
+                    fontSize: '0.82rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}
+                >
+                  <span>{acc.icon}</span>
+                  {acc.label}
+                </button>
+              );
+            })}
           </div>
+
+          {/* Sub-selector de Banco específico si la cuenta es Banco */}
+          {accountId === 'bank' && banks && banks.length > 0 && (
+            <div style={{ marginTop: '10px' }}>
+              <select value={bankId} onChange={e => setBankId(e.target.value)}>
+                {banks.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        {/* Selector de Destino - SOLO PARA TRANSFERENCIAS */}
+        {/* Cuenta Destino (Solo si es Traspaso) */}
         {type === 'transfer' && (
-          <div className="animate-fade">
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', display: 'block', marginBottom: '8px' }}>
-                Cuenta Destino
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {accounts.filter(a => a.id !== 'savings').map(acc => (
+          <div style={{ marginBottom: '18px' }} className="animate-fade">
+            <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+              Hacia (Cuenta Destino)
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              {[
+                { id: 'cash', label: 'Efectivo', icon: '💵' },
+                { id: 'bank', label: 'Banco', icon: '🏛️' },
+                { id: 'savings', label: 'Ahorro', icon: '🐷' }
+              ].map(acc => {
+                const isSelected = toAccountId === acc.id;
+                return (
                   <button
                     key={acc.id}
                     type="button"
                     onClick={() => setToAccountId(acc.id)}
                     style={{
-                      padding: '8px 12px', borderRadius: '10px', fontSize: '0.78rem',
-                      border: `1px solid ${toAccountId === acc.id ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}`,
-                      background: toAccountId === acc.id ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
-                      color: toAccountId === acc.id ? 'var(--primary)' : 'var(--text-dim)',
-                      cursor: 'pointer', transition: 'all 0.2s ease', fontWeight: toAccountId === acc.id ? '600' : '400'
+                      padding: '10px', borderRadius: '12px', border: '1px solid',
+                      background: isSelected ? 'rgba(0, 122, 255, 0.2)' : 'rgba(255,255,255,0.03)',
+                      borderColor: isSelected ? '#007aff' : 'rgba(255,255,255,0.08)',
+                      color: isSelected ? 'white' : 'var(--text-dim)',
+                      fontWeight: isSelected ? '700' : '500',
+                      fontSize: '0.82rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                     }}
                   >
-                    {acc.icon} {acc.label}
+                    <span>{acc.icon}</span>
+                    {acc.label}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
 
             {toAccountId === 'bank' && banks && banks.length > 0 && (
-              <div style={{ marginBottom: '20px', padding: '14px', borderRadius: '14px', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid rgba(var(--primary-rgb), 0.1)' }}>
-                <p style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '10px' }}>Banco Destino</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              <div style={{ marginTop: '10px' }}>
+                <select value={toBankId} onChange={e => setToBankId(e.target.value)}>
                   {banks.map(b => (
-                    <button key={b.id} type="button" onClick={() => setToBankId(b.id)}
-                      style={{
-                        padding: '6px 10px', borderRadius: '8px', fontSize: '0.75rem', border: 'none', cursor: 'pointer',
-                        background: toBankId === b.id ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
-                        color: toBankId === b.id ? 'black' : 'var(--text-dim)', fontWeight: toBankId === b.id ? '700' : '400'
-                      }}
-                    >{b.name}</button>
+                    <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
-                </div>
+                </select>
               </div>
             )}
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {editingData && (
-            <button type="button" onClick={onCancelEdit} style={{
-              flex: 1, padding: '12px', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '12px', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer'
-            }}>Cancelar</button>
+        {/* Fecha y Hora */}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Calendar size={14} /> Fecha del movimiento
+          </label>
+          <input
+            type="datetime-local"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            style={{ fontSize: '0.9rem' }}
+          />
+        </div>
+
+        {/* Botones de acción */}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {onCancelEdit && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="btn-secondary"
+              style={{ flex: 1, padding: '16px' }}
+            >
+              Cancelar
+            </button>
           )}
-          <button type="submit" className="btn-primary" style={{ flex: editingData ? 2 : 1 }}>
-            {editingData ? 'Actualizar Cambios' : `Guardar ${type === 'income' ? 'Ingreso' : 'Gasto'}`}
+          <button
+            type="submit"
+            className="btn-primary"
+            style={{ flex: 2, padding: '16px', fontSize: '1rem' }}
+          >
+            {editingData ? 'Guardar Cambios' : 'Confirmar Movimiento'}
           </button>
         </div>
       </form>
