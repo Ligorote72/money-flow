@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { verifyPin, clearLocalPin } from '../utils/crypto';
-import { isBiometricsSupported, hasLocalBiometrics, verifyBiometrics } from '../utils/biometrics';
-import { LogOut, Delete, Fingerprint } from 'lucide-react';
+import { isBiometricsSupported, hasLocalBiometrics, verifyBiometrics, clearLocalBiometrics } from '../utils/biometrics';
+import { LogOut, Delete, Fingerprint, AlertCircle } from 'lucide-react';
 
 export default function PinLockScreen({ onUnlock, onLogout }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [isVerifyingBio, setIsVerifyingBio] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     if (pin.length === 4) {
@@ -38,13 +39,13 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
         setStatusMsg('¡Desbloqueado!');
         onUnlock();
       } else {
-        setStatusMsg('Huella no reconocida. Ingresa tu PIN de 4 dígitos.');
+        setStatusMsg('Huella no reconocida en este dispositivo. Ingresa tu PIN de 4 dígitos.');
         setError(true);
         setTimeout(() => setError(false), 600);
       }
     } catch (err) {
       console.error(err);
-      setStatusMsg('No se pudo verificar la huella. Ingresa tu PIN.');
+      setStatusMsg('La huella no está disponible aquí. Ingresa tu PIN.');
       setError(true);
       setTimeout(() => setError(false), 600);
     } finally {
@@ -59,7 +60,7 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
     if (isValid) {
       onUnlock();
     } else {
-      setStatusMsg('PIN incorrecto');
+      setStatusMsg('PIN incorrecto. Intenta de nuevo.');
       setError(true);
       setTimeout(() => {
         setPin('');
@@ -80,11 +81,11 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
     setError(false);
   };
 
-  const handleForgotPin = () => {
-    if(window.confirm('¿Olvidaste tu PIN? Si cierras sesión, se borrará el PIN actual, pero tendrás que volver a iniciar sesión con Google.')) {
-      clearLocalPin();
-      onLogout(); // Llamamos la función de cierre de sesión desde App.jsx
-    }
+  const handleConfirmReset = () => {
+    clearLocalPin();
+    clearLocalBiometrics();
+    setShowLogoutModal(false);
+    onLogout();
   };
 
   // Botones del teclado: 1-9, luego vacío, 0, retroceso
@@ -173,7 +174,8 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
                   backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.03)',
                   color: 'white', height: '65px', borderRadius: '50%', fontSize: '1.7rem', fontWeight: '400',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', transition: 'background 0.1s', userSelect: 'none'
+                  cursor: 'pointer', transition: 'background 0.1s', userSelect: 'none',
+                  touchAction: 'manipulation'
                 }}
                 onPointerDown={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
                 onPointerUp={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
@@ -198,7 +200,7 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
               color: isVerifyingBio ? 'var(--text-dim)' : 'var(--primary)',
               cursor: isVerifyingBio ? 'wait' : 'pointer', 
               opacity: isVerifyingBio ? 0.6 : 0.9,
-              transition: 'opacity 0.2s'
+              transition: 'opacity 0.2s', touchAction: 'manipulation'
             }}
           >
             <Fingerprint size={32} />
@@ -209,17 +211,70 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
         )}
 
         <button 
-          onClick={handleForgotPin}
+          onClick={() => setShowLogoutModal(true)}
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
             backgroundColor: 'transparent', border: 'none', color: 'var(--text-dim)',
-            cursor: 'pointer'
+            cursor: 'pointer', touchAction: 'manipulation'
           }}
         >
           <LogOut size={28} />
-          <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>Cerrar Sesión</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>Olvidé mi PIN</span>
         </button>
       </div>
+
+      {/* Modal para restablecer PIN o cerrar sesión en móvil */}
+      {showLogoutModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '24px', zIndex: 300
+        }}>
+          <div style={{
+            backgroundColor: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '24px', padding: '24px', maxWidth: '340px', width: '100%',
+            textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
+          }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              backgroundColor: 'rgba(255, 69, 58, 0.15)', color: 'var(--expense)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              <AlertCircle size={32} />
+            </div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '8px', color: 'white' }}>
+              ¿Problemas para entrar?
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '24px', lineHeight: '1.4' }}>
+              Si no recuerdas tu PIN o el sensor de huella no responde, puedes cerrar sesión para eliminar el bloqueo local y volver a entrar con tu cuenta de Google.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={handleConfirmReset}
+                style={{
+                  backgroundColor: 'var(--expense)', color: 'white', border: 'none',
+                  padding: '14px', borderRadius: '14px', fontWeight: '600', fontSize: '0.9rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cerrar Sesión y Restablecer
+              </button>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.08)', color: 'white', border: 'none',
+                  padding: '14px', borderRadius: '14px', fontWeight: '500', fontSize: '0.9rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
