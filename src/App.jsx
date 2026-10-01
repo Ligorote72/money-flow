@@ -395,8 +395,6 @@ function AppContent() {
               </button>
             </div>
             
-            <WeeklySummary transactions={transactions} />
-
             <TransactionList 
               transactions={filteredTxs} 
               onEdit={startEditing} 
@@ -410,14 +408,17 @@ function AppContent() {
         )}
 
         {activeTab === 'analysis' && (
-          <AnalysisBreakdown 
-            transactions={transactions} 
-            filterMonth={filterMonth} 
-            filterYear={filterYear} 
-            dateFilterType={dateFilterType} 
-            startDate={startDate} 
-            endDate={endDate} 
-          />
+          <div className="animate-fade">
+            <WeeklySummary transactions={transactions} />
+            <AnalysisBreakdown 
+              transactions={transactions} 
+              filterMonth={filterMonth} 
+              filterYear={filterYear} 
+              dateFilterType={dateFilterType} 
+              startDate={startDate} 
+              endDate={endDate} 
+            />
+          </div>
         )}
 
         {activeTab === 'varios' && (
@@ -587,30 +588,17 @@ function AppContent() {
             <Plus size={28} strokeWidth={3} />
           </button>
 
-          {/* Tab 3: Finca Cafetera */}
-          <button 
-            onClick={() => {
-              setActiveTab('varios');
-              setVariosTab('minegocio');
-            }} 
-            className={`dock-item ${activeTab === 'varios' && variosTab === 'minegocio' ? 'active' : ''}`}
-            title="Finca Cafetera"
-          >
-            <Coffee size={22} className="dock-icon" />
-            <span className="dock-label">Finca</span>
-          </button>
-
-          {/* Tab 4: Planes & Deudas */}
+          {/* Tab 3: Menú / Más */}
           <button 
             onClick={() => {
               setActiveTab('varios');
               setVariosTab('menu');
             }} 
-            className={`dock-item ${activeTab === 'varios' && variosTab !== 'minegocio' ? 'active' : ''}`}
-            title="Planificación y Deudas"
+            className={`dock-item ${activeTab === 'varios' ? 'active' : ''}`}
+            title="Menú y Ajustes"
           >
             <SlidersHorizontal size={22} className="dock-icon" />
-            <span className="dock-label">Planes</span>
+            <span className="dock-label">Más</span>
           </button>
         </nav>
       </div>
