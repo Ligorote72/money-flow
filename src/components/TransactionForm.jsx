@@ -128,203 +128,216 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="transaction-form animate-fade">
-      <div className="modal-scroll-content">
-        {/* Selector de Tipo (Gasto | Ingreso | Traspaso) Segmented Pills */}
+    <form onSubmit={handleSubmit} className="transaction-form animate-fade" style={{ paddingTop: '16px' }}>
+      {/* Selector de Tipo (Gasto | Ingreso | Traspaso) Segmented Pills */}
+      <div style={{
+        display: 'flex', gap: '6px',
+        background: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '16px', padding: '4px', marginBottom: '14px',
+        border: '1px solid rgba(255, 255, 255, 0.06)'
+      }}>
+        {Object.values(TYPE_CONFIG).map(t => {
+          const isActive = type === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => handleTypeChange(t.id)}
+              style={{
+                flex: 1, padding: '10px 4px', borderRadius: '12px',
+                cursor: 'pointer', fontWeight: isActive ? '800' : '600', fontSize: '0.84rem',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                background: isActive ? t.color : 'transparent',
+                color: isActive ? '#ffffff' : 'var(--text-dim)',
+                border: 'none',
+                boxShadow: isActive ? `0 4px 14px ${t.glow}` : 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
+              }}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Input Monto Principal - Caja Hero en color activo */}
+      <div style={{ marginBottom: '14px' }}>
         <div style={{
-          display: 'flex', gap: '6px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '18px', padding: '5px', marginBottom: '18px',
-          border: '1px solid rgba(255, 255, 255, 0.06)'
+          position: 'relative',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: `1.5px solid ${currentTheme.border}`,
+          boxShadow: `0 0 20px ${currentTheme.glow}`,
+          borderRadius: '20px',
+          padding: '12px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
         }}>
-          {Object.values(TYPE_CONFIG).map(t => {
-            const isActive = type === t.id;
-            return (
+          <span style={{ 
+            fontSize: '0.7rem', 
+            color: 'var(--text-dim)', 
+            fontWeight: '700', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.06em', 
+            marginBottom: '2px' 
+          }}>
+            Monto
+          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', position: 'relative' }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="$ 0"
+              value={formatInputAmount(amount)}
+              onChange={(e) => setAmount(parseInputAmount(e.target.value))}
+              required
+              style={{ 
+                fontSize: '2.2rem', 
+                fontWeight: '900', 
+                color: currentTheme.color, 
+                letterSpacing: '-0.03em', 
+                textAlign: 'center', 
+                padding: '2px 28px',
+                margin: 0,
+                background: 'transparent',
+                border: 'none',
+                boxShadow: 'none',
+                width: '100%',
+                outline: 'none',
+                caretColor: currentTheme.color
+              }}
+            />
+            {amount && (
               <button
-                key={t.id}
                 type="button"
-                onClick={() => handleTypeChange(t.id)}
+                onClick={() => setAmount('')}
+                title="Borrar monto"
                 style={{
-                  flex: 1, padding: '11px 6px', borderRadius: '14px',
-                  cursor: 'pointer', fontWeight: isActive ? '800' : '600', fontSize: '0.86rem',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  background: isActive ? t.color : 'transparent',
-                  color: isActive ? '#ffffff' : 'var(--text-dim)',
-                  border: 'none',
-                  boxShadow: isActive ? `0 4px 16px ${t.glow}` : 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  position: 'absolute', right: '0px',
+                  background: 'rgba(255,255,255,0.08)', border: 'none', color: 'var(--text-dim)',
+                  borderRadius: '50%', width: '26px', height: '26px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', fontSize: '12px'
                 }}
               >
-                {t.icon}
-                {t.label}
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Input Descripción */}
+      <div style={{ marginBottom: '14px' }}>
+        <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+          Concepto / Nota <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: '400' }}>(opcional)</span>
+        </label>
+        <input
+          type="text"
+          placeholder={type === 'income' ? 'Ej: Salario quincena, Venta café...' : (type === 'transfer' ? 'Ej: Para ahorros, Nequi a Banco...' : 'Ej: Almuerzo, Mercado, Combustible...')}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          style={{ borderRadius: '14px', padding: '11px 14px' }}
+        />
+      </div>
+
+      {/* Selector de Categorías (para Ingreso o Gasto) */}
+      {type !== 'transfer' && (
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
+            Categoría
+          </label>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(4, 1fr)', 
+            gap: '7px',
+            padding: '2px'
+          }}>
+            {categoryList.map(cat => {
+              const isSelected = category === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategory(cat.id)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                    padding: '8px 3px', borderRadius: '14px',
+                    background: isSelected ? `${cat.color}22` : 'rgba(255,255,255,0.03)',
+                    border: `1.5px solid ${isSelected ? cat.color : 'rgba(255,255,255,0.06)'}`,
+                    cursor: 'pointer', transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                    boxShadow: isSelected ? `0 0 14px ${cat.color}33` : 'none'
+                  }}
+                >
+                  <span style={{ fontSize: '1.25rem' }}>{cat.icon}</span>
+                  <span style={{ 
+                    fontSize: '0.66rem', fontWeight: isSelected ? '800' : '500', 
+                    color: isSelected ? '#ffffff' : 'var(--text-dim)',
+                    textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '92%' 
+                  }}>
+                    {cat.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Cuenta Origen */}
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
+          {type === 'transfer' ? 'Desde (Cuenta Origen)' : 'Cuenta / Método'}
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          {[
+            { id: 'cash', label: 'Efectivo', icon: '💵' },
+            { id: 'bank', label: 'Banco', icon: '🏛️' },
+            { id: 'savings', label: 'Ahorro', icon: '🐷' }
+          ].map(acc => {
+            const isSelected = accountId === acc.id;
+            return (
+              <button
+                key={acc.id}
+                type="button"
+                onClick={() => setAccountId(acc.id)}
+                style={{
+                  padding: '10px 6px', borderRadius: '13px',
+                  background: isSelected ? `${currentTheme.color}20` : 'rgba(255,255,255,0.03)',
+                  border: `1.5px solid ${isSelected ? currentTheme.color : 'rgba(255,255,255,0.06)'}`,
+                  color: isSelected ? 'white' : 'var(--text-dim)',
+                  fontWeight: isSelected ? '800' : '600',
+                  fontSize: '0.8rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span style={{ fontSize: '1.05rem' }}>{acc.icon}</span>
+                {acc.label}
               </button>
             );
           })}
         </div>
 
-        {/* Input Monto Principal - Caja Hero en color activo */}
-        <div style={{ marginBottom: '14px' }}>
-          <div style={{
-            position: 'relative',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: `1.5px solid ${currentTheme.border}`,
-            boxShadow: `0 0 24px ${currentTheme.glow}`,
-            borderRadius: '24px',
-            padding: '16px 18px',
-            transition: 'all 0.25s ease',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <span style={{ 
-              fontSize: '0.72rem', 
-              color: 'var(--text-dim)', 
-              fontWeight: '700', 
-              textTransform: 'uppercase', 
-              letterSpacing: '0.06em', 
-              marginBottom: '2px' 
-            }}>
-              Monto a registrar
-            </span>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', position: 'relative' }}>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="$ 0"
-                value={formatInputAmount(amount)}
-                onChange={(e) => setAmount(parseInputAmount(e.target.value))}
-                required
-                style={{ 
-                  fontSize: '2.5rem', 
-                  fontWeight: '900', 
-                  color: currentTheme.color, 
-                  letterSpacing: '-0.03em', 
-                  textAlign: 'center', 
-                  padding: '4px 30px',
-                  margin: 0,
-                  background: 'transparent',
-                  border: 'none',
-                  boxShadow: 'none',
-                  width: '100%',
-                  outline: 'none',
-                  caretColor: currentTheme.color
-                }}
-              />
-              {amount && (
-                <button
-                  type="button"
-                  onClick={() => setAmount('')}
-                  title="Borrar monto"
-                  style={{
-                    position: 'absolute', right: '4px',
-                    background: 'rgba(255,255,255,0.08)', border: 'none', color: 'var(--text-dim)',
-                    borderRadius: '50%', width: '28px', height: '28px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', fontSize: '13px'
-                  }}
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Chips de monto rápido */}
-        <div style={{ 
-          display: 'flex', gap: '8px', overflowX: 'auto', 
-          marginBottom: '18px', padding: '2px 0 6px',
-          scrollbarWidth: 'none',
-          WebkitOverflowScrolling: 'touch'
-        }}>
-          {QUICK_AMOUNTS.map(amt => (
-            <button
-              key={amt}
-              type="button"
-              onClick={() => handleQuickAddAmount(amt)}
-              style={{
-                padding: '7px 12px',
-                borderRadius: '12px',
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.04)',
-                color: 'white',
-                fontSize: '0.74rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                transition: 'all 0.15s ease'
-              }}
-              onPointerDown={e => e.currentTarget.style.transform = 'scale(0.94)'}
-              onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              +{formatCurrency(amt)}
-            </button>
-          ))}
-        </div>
-
-        {/* Input Descripción */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
-            Concepto / Nota <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '400' }}>(opcional)</span>
-          </label>
-          <input
-            type="text"
-            placeholder={type === 'income' ? 'Ej: Salario quincena, Venta café...' : (type === 'transfer' ? 'Ej: Para ahorros, Nequi a Banco...' : 'Ej: Almuerzo, Mercado, Combustible...')}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            style={{ borderRadius: '16px' }}
-          />
-        </div>
-
-        {/* Selector de Categorías (para Ingreso o Gasto) */}
-        {type !== 'transfer' && (
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '8px' }}>
-              Categoría
-            </label>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(4, 1fr)', 
-              gap: '8px',
-              padding: '2px'
-            }}>
-              {categoryList.map(cat => {
-                const isSelected = category === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setCategory(cat.id)}
-                    style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
-                      padding: '10px 4px', borderRadius: '16px',
-                      background: isSelected ? `${cat.color}22` : 'rgba(255,255,255,0.03)',
-                      border: `1.5px solid ${isSelected ? cat.color : 'rgba(255,255,255,0.06)'}`,
-                      cursor: 'pointer', transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-                      boxShadow: isSelected ? `0 0 16px ${cat.color}33` : 'none'
-                    }}
-                  >
-                    <span style={{ fontSize: '1.35rem' }}>{cat.icon}</span>
-                    <span style={{ 
-                      fontSize: '0.68rem', fontWeight: isSelected ? '800' : '500', 
-                      color: isSelected ? '#ffffff' : 'var(--text-dim)',
-                      textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '90%' 
-                    }}>
-                      {cat.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Sub-selector de Banco específico si la cuenta es Banco */}
+        {accountId === 'bank' && banks && banks.length > 0 && (
+          <div style={{ marginTop: '8px' }}>
+            <select value={bankId} onChange={e => setBankId(e.target.value)} style={{ borderRadius: '12px', padding: '8px 12px' }}>
+              {banks.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
           </div>
         )}
+      </div>
 
-        {/* Cuenta Origen */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
-            {type === 'transfer' ? 'Desde (Cuenta Origen)' : 'Cuenta / Método'}
+      {/* Cuenta Destino (Solo si es Traspaso) */}
+      {type === 'transfer' && (
+        <div style={{ marginBottom: '16px' }} className="animate-fade">
+          <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
+            Hacia (Cuenta Destino)
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {[
@@ -332,34 +345,33 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
               { id: 'bank', label: 'Banco', icon: '🏛️' },
               { id: 'savings', label: 'Ahorro', icon: '🐷' }
             ].map(acc => {
-              const isSelected = accountId === acc.id;
+              const isSelected = toAccountId === acc.id;
               return (
                 <button
                   key={acc.id}
                   type="button"
-                  onClick={() => setAccountId(acc.id)}
+                  onClick={() => setToAccountId(acc.id)}
                   style={{
-                    padding: '11px 8px', borderRadius: '14px',
-                    background: isSelected ? `${currentTheme.color}20` : 'rgba(255,255,255,0.03)',
-                    border: `1.5px solid ${isSelected ? currentTheme.color : 'rgba(255,255,255,0.06)'}`,
+                    padding: '10px 6px', borderRadius: '13px',
+                    background: isSelected ? 'rgba(0, 122, 255, 0.2)' : 'rgba(255,255,255,0.03)',
+                    border: `1.5px solid ${isSelected ? '#007aff' : 'rgba(255,255,255,0.06)'}`,
                     color: isSelected ? 'white' : 'var(--text-dim)',
                     fontWeight: isSelected ? '800' : '600',
-                    fontSize: '0.82rem', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    fontSize: '0.8rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <span style={{ fontSize: '1.1rem' }}>{acc.icon}</span>
+                  <span style={{ fontSize: '1.05rem' }}>{acc.icon}</span>
                   {acc.label}
                 </button>
               );
             })}
           </div>
 
-          {/* Sub-selector de Banco específico si la cuenta es Banco */}
-          {accountId === 'bank' && banks && banks.length > 0 && (
-            <div style={{ marginTop: '10px' }}>
-              <select value={bankId} onChange={e => setBankId(e.target.value)} style={{ borderRadius: '14px' }}>
+          {toAccountId === 'bank' && banks && banks.length > 0 && (
+            <div style={{ marginTop: '8px' }}>
+              <select value={toBankId} onChange={e => setToBankId(e.target.value)} style={{ borderRadius: '12px', padding: '8px 12px' }}>
                 {banks.map(b => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
@@ -367,77 +379,29 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
             </div>
           )}
         </div>
+      )}
 
-        {/* Cuenta Destino (Solo si es Traspaso) */}
-        {type === 'transfer' && (
-          <div style={{ marginBottom: '18px' }} className="animate-fade">
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
-              Hacia (Cuenta Destino)
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-              {[
-                { id: 'cash', label: 'Efectivo', icon: '💵' },
-                { id: 'bank', label: 'Banco', icon: '🏛️' },
-                { id: 'savings', label: 'Ahorro', icon: '🐷' }
-              ].map(acc => {
-                const isSelected = toAccountId === acc.id;
-                return (
-                  <button
-                    key={acc.id}
-                    type="button"
-                    onClick={() => setToAccountId(acc.id)}
-                    style={{
-                      padding: '11px 8px', borderRadius: '14px',
-                      background: isSelected ? 'rgba(0, 122, 255, 0.2)' : 'rgba(255,255,255,0.03)',
-                      border: `1.5px solid ${isSelected ? '#007aff' : 'rgba(255,255,255,0.06)'}`,
-                      color: isSelected ? 'white' : 'var(--text-dim)',
-                      fontWeight: isSelected ? '800' : '600',
-                      fontSize: '0.82rem', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <span style={{ fontSize: '1.1rem' }}>{acc.icon}</span>
-                    {acc.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {toAccountId === 'bank' && banks && banks.length > 0 && (
-              <div style={{ marginTop: '10px' }}>
-                <select value={toBankId} onChange={e => setToBankId(e.target.value)} style={{ borderRadius: '14px' }}>
-                  {banks.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Fecha y Hora */}
-        <div style={{ marginBottom: '22px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Calendar size={14} color="var(--primary)" /> Fecha y Hora
-          </label>
-          <input
-            type="datetime-local"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            style={{ fontSize: '0.9rem', borderRadius: '14px' }}
-          />
-        </div>
+      {/* Fecha y Hora (Compacta) */}
+      <div style={{ marginBottom: '24px' }}>
+        <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+          <Calendar size={13} color="var(--primary)" /> Fecha y Hora
+        </label>
+        <input
+          type="datetime-local"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          style={{ fontSize: '0.86rem', borderRadius: '12px', padding: '8px 12px' }}
+        />
       </div>
 
-      {/* Botones de acción sticky en la base del modal */}
-      <div className="modal-sticky-actions">
+      {/* Botones de acción principales */}
+      <div style={{ display: 'flex', gap: '10px', marginTop: '10px', paddingBottom: '16px' }}>
         {onCancelEdit && (
           <button
             type="button"
             onClick={onCancelEdit}
             className="btn-secondary"
-            style={{ flex: 1, padding: '14px', borderRadius: '16px', fontWeight: '700' }}
+            style={{ flex: 1, padding: '14px', borderRadius: '14px', fontWeight: '700' }}
           >
             Cancelar
           </button>
@@ -445,7 +409,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
         <button
           type="submit"
           style={{
-            flex: 2, padding: '14px', borderRadius: '16px',
+            flex: 2, padding: '14px', borderRadius: '14px',
             backgroundColor: currentTheme.color,
             color: '#ffffff',
             border: 'none',

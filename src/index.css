@@ -650,10 +650,10 @@ select option {
   border-bottom: none;
   border-radius: 28px 28px 0 0;
   box-shadow: 0 -14px 60px rgba(0, 0, 0, 0.88);
-  max-height: 90dvh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  max-height: 88dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 20px calc(env(safe-area-inset-bottom, 20px) + 36px);
 }
 
 @media (min-width: 520px) {
@@ -670,18 +670,18 @@ select option {
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.25);
   margin: 10px auto 4px;
-  flex-shrink: 0;
 }
 
 .modal-header {
-  padding: 10px 20px 14px;
+  position: sticky;
+  top: 0;
+  padding: 12px 0 14px;
+  background: #0d121c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #0d121c;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
-  z-index: 10;
+  z-index: 20;
 }
 
 .modal-header h2 {
@@ -709,32 +709,6 @@ select option {
 .modal-header button:active {
   transform: scale(0.92);
   background: rgba(255, 255, 255, 0.15);
-}
-
-.modal-scroll-content {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 18px 20px 20px;
-}
-
-.modal-sticky-actions {
-  flex-shrink: 0;
-  padding: 12px 20px calc(env(safe-area-inset-bottom, 14px) + 14px);
-  background: rgba(13, 18, 28, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  gap: 10px;
-}
-
-/* Fallback for other modals where form is direct child */
-.modal-container > form:not(.transaction-form) {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 18px 20px calc(env(safe-area-inset-bottom, 16px) + 24px) !important;
 }
 
 /* Modern Floating Island Bottom Nav */
