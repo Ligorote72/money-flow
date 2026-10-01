@@ -10,17 +10,22 @@ function bufferToBase64(buffer) {
 }
 
 function base64ToBuffer(base64) {
-  const binary_string = window.atob(base64);
-  const len = binary_string.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binary_string.charCodeAt(i);
+  try {
+    const binary_string = window.atob(base64);
+    const len = binary_string.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  } catch (e) {
+    console.error('Error al convertir base64 a buffer:', e);
+    return new ArrayBuffer(0);
   }
-  return bytes;
 }
 
 export function isBiometricsSupported() {
-  return window.PublicKeyCredential !== undefined;
+  return typeof window !== 'undefined' && window.PublicKeyCredential !== undefined;
 }
 
 export function hasLocalBiometrics() {
@@ -62,7 +67,7 @@ export async function registerBiometrics() {
       }
     });
 
-    if (cred) {
+    if (cred && cred.rawId) {
       localStorage.setItem('moneyflow_credential_id', bufferToBase64(cred.rawId));
       return true;
     }
@@ -77,18 +82,24 @@ export async function verifyBiometrics() {
   const credIdBase64 = localStorage.getItem('moneyflow_credential_id');
   if (!credIdBase64) return false;
 
+  if (!isBiometricsSupported()) return false;
+
   const challenge = new Uint8Array(32);
   crypto.getRandomValues(challenge);
 
   try {
+    const rawBuffer = base64ToBuffer(credIdBase64);
+    if (!rawBuffer || rawBuffer.byteLength === 0) return false;
+
     const cred = await navigator.credentials.get({
       publicKey: {
         challenge: challenge,
         allowCredentials: [{
-          id: base64ToBuffer(credIdBase64),
+          id: rawBuffer,
           type: "public-key",
         }],
-        userVerification: "required"
+        userVerification: "required",
+        timeout: 60000
       }
     });
     return !!cred;

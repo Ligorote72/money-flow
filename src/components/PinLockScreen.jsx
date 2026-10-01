@@ -6,6 +6,8 @@ import { LogOut, Delete, Fingerprint } from 'lucide-react';
 export default function PinLockScreen({ onUnlock, onLogout }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  const [statusMsg, setStatusMsg] = useState('');
+  const [isVerifyingBio, setIsVerifyingBio] = useState(false);
 
   useEffect(() => {
     if (pin.length === 4) {
@@ -14,18 +16,39 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
   }, [pin]);
 
   useEffect(() => {
+    // Intento de desbloqueo biométrico automático solo si el entorno lo permite
     if (hasLocalBiometrics()) {
-      handleBiometrics();
+      verifyBiometrics().then(success => {
+        if (success) {
+          onUnlock();
+        }
+      }).catch(err => {
+        console.warn('Biometría en carga inicial requiere gesto del usuario:', err);
+      });
     }
   }, []);
 
   const handleBiometrics = async () => {
-    const success = await verifyBiometrics();
-    if (success) {
-      onUnlock();
-    } else {
+    if (isVerifyingBio) return;
+    setIsVerifyingBio(true);
+    setStatusMsg('Verificando huella...');
+    try {
+      const success = await verifyBiometrics();
+      if (success) {
+        setStatusMsg('¡Desbloqueado!');
+        onUnlock();
+      } else {
+        setStatusMsg('Huella no reconocida. Ingresa tu PIN de 4 dígitos.');
+        setError(true);
+        setTimeout(() => setError(false), 600);
+      }
+    } catch (err) {
+      console.error(err);
+      setStatusMsg('No se pudo verificar la huella. Ingresa tu PIN.');
       setError(true);
-      setTimeout(() => setError(false), 500);
+      setTimeout(() => setError(false), 600);
+    } finally {
+      setIsVerifyingBio(false);
     }
   };
 
@@ -36,6 +59,7 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
     if (isValid) {
       onUnlock();
     } else {
+      setStatusMsg('PIN incorrecto');
       setError(true);
       setTimeout(() => {
         setPin('');
@@ -90,7 +114,12 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
             🔐
           </div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'white', marginBottom: '8px' }}>MoneyFlow</h1>
-          <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Ingresa tu PIN</p>
+          <p style={{ 
+            color: error ? 'var(--expense)' : (statusMsg ? 'var(--primary)' : 'var(--text-dim)'), 
+            fontSize: '0.88rem', minHeight: '1.3rem', transition: 'color 0.2s', padding: '0 10px'
+          }}>
+            {statusMsg || 'Ingresa tu PIN'}
+          </p>
         </div>
 
         {/* PIN Indicators */}
@@ -162,14 +191,20 @@ export default function PinLockScreen({ onUnlock, onLogout }) {
         {hasLocalBiometrics() && (
           <button 
             onClick={handleBiometrics}
+            disabled={isVerifyingBio}
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-              backgroundColor: 'transparent', border: 'none', color: 'var(--primary)',
-              cursor: 'pointer', opacity: 0.9
+              backgroundColor: 'transparent', border: 'none', 
+              color: isVerifyingBio ? 'var(--text-dim)' : 'var(--primary)',
+              cursor: isVerifyingBio ? 'wait' : 'pointer', 
+              opacity: isVerifyingBio ? 0.6 : 0.9,
+              transition: 'opacity 0.2s'
             }}
           >
             <Fingerprint size={32} />
-            <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>Huella</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>
+              {isVerifyingBio ? 'Leyendo...' : 'Huella'}
+            </span>
           </button>
         )}
 
