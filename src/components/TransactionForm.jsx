@@ -41,6 +41,18 @@ const TYPE_CONFIG = {
   }
 };
 
+const getLocalDatetimeString = (dateInput = new Date()) => {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = null, banks = [] }) => {
   const [description, setDescription] = useState('');
   const [amount,      setAmount]      = useState('');
@@ -50,7 +62,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
   const [bankId,      setBankId]      = useState('general');
   const [toAccountId, setToAccountId] = useState('bank');
   const [toBankId,    setToBankId]    = useState('general');
-  const [date,        setDate]        = useState(new Date().toISOString().slice(0, 16));
+  const [date,        setDate]        = useState(() => getLocalDatetimeString());
 
   const resetForm = () => {
     setDescription('');
@@ -59,7 +71,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
     setCategory('food');
     setAccountId('cash');
     setBankId('general');
-    setDate(new Date().toISOString().slice(0, 16));
+    setDate(getLocalDatetimeString());
   };
 
   useEffect(() => {
@@ -80,10 +92,9 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
       }
       if (editingData.date) {
         try {
-          const d = new Date(editingData.date);
-          setDate(d.toISOString().slice(0, 16));
+          setDate(getLocalDatetimeString(editingData.date));
         } catch {
-          setDate(new Date().toISOString().slice(0, 16));
+          setDate(getLocalDatetimeString());
         }
       }
     } else {
