@@ -11,6 +11,20 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('Fatal initialization error:', e);
+        var root = document.getElementById('root');
+        if (root && (!root.innerHTML || root.innerHTML.trim() === '')) {
+          root.innerHTML = '<div style="padding:40px 20px;color:white;background:#06090f;min-height:100vh;font-family:system-ui,-apple-system,sans-serif;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
+            '<div style="font-size:42px;margin-bottom:16px;">⚠️</div>' +
+            '<h2 style="font-size:1.3rem;margin-bottom:8px;font-weight:800;">Actualización requerida</h2>' +
+            '<p style="color:rgba(255,255,255,0.6);font-size:0.88rem;max-width:320px;margin-bottom:24px;line-height:1.4;">Hay una versión antigua en caché. Presiona el botón para actualizar ahora.</p>' +
+            '<button onclick="if(\'serviceWorker\' in navigator){navigator.serviceWorker.getRegistrations().then(function(r){for(var i of r) i.unregister();});}caches.keys().then(function(k){for(var i of k) caches.delete(i);});location.reload(true);" style="padding:14px 24px;background:#34c759;color:#000;border:none;border-radius:14px;font-weight:700;font-size:0.95rem;cursor:pointer;">Limpiar Caché y Actualizar</button>' +
+            '</div>';
+        }
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

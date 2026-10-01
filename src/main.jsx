@@ -4,7 +4,19 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.jsx'
 
-registerSW({ immediate: true })
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    updateSW(true);
+  },
+  onRegisteredSW(swUrl, r) {
+    if (r) {
+      setInterval(() => {
+        r.update();
+      }, 60 * 1000); // Check every minute
+    }
+  }
+});
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
