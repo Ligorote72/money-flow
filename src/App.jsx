@@ -20,6 +20,7 @@ import BusinessDashboard from './components/BusinessDashboard';
 import { hasLocalPin } from './utils/crypto';
 import { useFinanceData } from './hooks/useFinanceData';
 import { ToastProvider } from './components/ui/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
 import { 
   Home, 
   PieChart, 
@@ -618,10 +619,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </SettingsProvider>
+    <ErrorBoundary>
+      <SettingsProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </SettingsProvider>
+    </ErrorBoundary>
   );
 }

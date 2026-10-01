@@ -816,13 +816,9 @@ const BusinessDashboard = ({
                   const isPaying = payWorkerId === w.id;
 
                   // Dual calculator logic: Kg to @ or direct @
-                  const calculatedUnits = useMemo(() => {
-                    if (payUnitsMode === 'kg') {
-                      const kg = parseFloat(kgInputValue) || 0;
-                      return kg / 12.5; // 1 arroba = 12.5 kg
-                    }
-                    return parseFloat(workerRate) || 0;
-                  }, [payUnitsMode, kgInputValue, workerRate]);
+                  const calculatedUnits = payUnitsMode === 'kg'
+                    ? ((parseFloat(kgInputValue) || 0) / 12.5) // 1 arroba = 12.5 kg
+                    : (parseFloat(workerRate) || 0);
 
                   const currentRate = (selectedActivity === 'Recolectar' && (payUnitsMode === '@' || payUnitsMode === 'kg'))
                     ? (activeBusiness.arrobaRate || 15000)

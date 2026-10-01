@@ -5,6 +5,7 @@ import ShineBorder from './ui/ShineBorder';
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
+  ArrowDownLeft,
   Landmark, 
   PiggyBank, 
   Wallet, 

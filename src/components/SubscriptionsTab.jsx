@@ -8,6 +8,7 @@ const SubscriptionsTab = ({ subscriptions = [], onAddSubscription, onDeleteSubsc
   const [parentList] = useAutoAnimate();
   const [editingSub, setEditingSub] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState(null);
 
   // Form states
   const [name, setName] = useState('');
