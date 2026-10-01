@@ -1,12 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../data/categories';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
-import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Calendar, Landmark, Wallet, Check } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Calendar, Landmark, Wallet, Check, X } from 'lucide-react';
 
 const INCOME_CATEGORIES  = CATEGORIES.filter(c => ['salary','freelance','other_income','savings'].includes(c.id));
 const EXPENSE_CATEGORIES = CATEGORIES.filter(c => !['salary','freelance','other_income'].includes(c.id));
 
 const QUICK_AMOUNTS = [10000, 20000, 50000, 100000, 200000, 500000];
+
+const TYPE_CONFIG = {
+  expense: {
+    id: 'expense',
+    label: 'Gasto',
+    submitLabel: 'Registrar Gasto',
+    color: '#ff3b30',
+    bg: 'rgba(255, 59, 48, 0.12)',
+    border: 'rgba(255, 59, 48, 0.4)',
+    glow: 'rgba(255, 59, 48, 0.22)',
+    icon: <ArrowUpRight size={17} strokeWidth={2.5} />
+  },
+  income: {
+    id: 'income',
+    label: 'Ingreso',
+    submitLabel: 'Registrar Ingreso',
+    color: '#34c759',
+    bg: 'rgba(52, 199, 89, 0.12)',
+    border: 'rgba(52, 199, 89, 0.4)',
+    glow: 'rgba(52, 199, 89, 0.22)',
+    icon: <ArrowDownLeft size={17} strokeWidth={2.5} />
+  },
+  transfer: {
+    id: 'transfer',
+    label: 'Traspaso',
+    submitLabel: 'Registrar Traspaso',
+    color: '#007aff',
+    bg: 'rgba(0, 122, 255, 0.12)',
+    border: 'rgba(0, 122, 255, 0.4)',
+    glow: 'rgba(0, 122, 255, 0.22)',
+    icon: <ArrowLeftRight size={17} strokeWidth={2.5} />
+  }
+};
 
 const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = null, banks = [] }) => {
   const [description, setDescription] = useState('');
@@ -58,6 +91,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
     }
   }, [editingData]);
 
+  const currentTheme = TYPE_CONFIG[type] || TYPE_CONFIG.expense;
   const categoryList = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const handleTypeChange = (newType) => {
@@ -94,18 +128,15 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
   };
 
   return (
-    <div className="card animate-fade" style={{ margin: 0, padding: '20px', borderRadius: '24px' }}>
-      {/* Selector de Tipo (Gasto | Ingreso | Traspaso) */}
+    <div className="transaction-form animate-fade" style={{ width: '100%', margin: 0, padding: 0 }}>
+      {/* Selector de Tipo (Gasto | Ingreso | Traspaso) Segmented Pills */}
       <div style={{
         display: 'flex', gap: '6px',
-        background: 'rgba(255,255,255,0.05)',
-        borderRadius: '16px', padding: '4px', marginBottom: '20px'
+        background: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '18px', padding: '5px', marginBottom: '18px',
+        border: '1px solid rgba(255, 255, 255, 0.06)'
       }}>
-        {[
-          { id: 'expense', label: 'Gasto', icon: <ArrowUpRight size={16} />, color: 'var(--expense)' },
-          { id: 'income', label: 'Ingreso', icon: <ArrowDownLeft size={16} />, color: 'var(--income)' },
-          { id: 'transfer', label: 'Traspaso', icon: <ArrowLeftRight size={16} />, color: '#007aff' }
-        ].map(t => {
+        {Object.values(TYPE_CONFIG).map(t => {
           const isActive = type === t.id;
           return (
             <button
@@ -113,12 +144,13 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
               type="button"
               onClick={() => handleTypeChange(t.id)}
               style={{
-                flex: 1, padding: '12px 8px', borderRadius: '12px',
-                cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem',
+                flex: 1, padding: '11px 6px', borderRadius: '14px',
+                cursor: 'pointer', fontWeight: isActive ? '800' : '600', fontSize: '0.86rem',
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                background: isActive ? `${t.color}25` : 'transparent',
-                color: isActive ? t.color : 'var(--text-dim)',
-                border: isActive ? `1px solid ${t.color}50` : '1px solid transparent',
+                background: isActive ? t.color : 'transparent',
+                color: isActive ? '#ffffff' : 'var(--text-dim)',
+                border: 'none',
+                boxShadow: isActive ? `0 4px 16px ${t.glow}` : 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
               }}
             >
@@ -130,50 +162,102 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Input Monto Principal */}
+        {/* Input Monto Principal - Caja Hero en color activo */}
         <div style={{ marginBottom: '14px' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-            Monto a registrar
-            {amount && parseFloat(amount) > 0 && (
-              <span style={{ color: 'var(--primary)', fontWeight: '700' }}>
-                {formatCurrency(parseFloat(amount))}
-              </span>
-            )}
-          </label>
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="$ 0"
-            value={formatInputAmount(amount)}
-            onChange={(e) => setAmount(parseInputAmount(e.target.value))}
-            required
-            autoFocus
-            style={{ 
-              fontSize: '1.8rem', fontWeight: '800', 
-              color: type === 'income' ? 'var(--income)' : (type === 'expense' ? 'var(--expense)' : 'white'), 
-              letterSpacing: '-0.02em', textAlign: 'center', padding: '18px 14px' 
-            }}
-          />
+          <div style={{
+            position: 'relative',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: `1.5px solid ${currentTheme.border}`,
+            boxShadow: `0 0 24px ${currentTheme.glow}`,
+            borderRadius: '24px',
+            padding: '16px 18px',
+            transition: 'all 0.25s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}>
+            <span style={{ 
+              fontSize: '0.72rem', 
+              color: 'var(--text-dim)', 
+              fontWeight: '700', 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.06em', 
+              marginBottom: '2px' 
+            }}>
+              Monto a registrar
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', position: 'relative' }}>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="$ 0"
+                value={formatInputAmount(amount)}
+                onChange={(e) => setAmount(parseInputAmount(e.target.value))}
+                required
+                style={{ 
+                  fontSize: '2.5rem', 
+                  fontWeight: '900', 
+                  color: currentTheme.color, 
+                  letterSpacing: '-0.03em', 
+                  textAlign: 'center', 
+                  padding: '4px 30px',
+                  margin: 0,
+                  background: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
+                  width: '100%',
+                  outline: 'none',
+                  caretColor: currentTheme.color
+                }}
+              />
+              {amount && (
+                <button
+                  type="button"
+                  onClick={() => setAmount('')}
+                  title="Borrar monto"
+                  style={{
+                    position: 'absolute', right: '4px',
+                    background: 'rgba(255,255,255,0.08)', border: 'none', color: 'var(--text-dim)',
+                    borderRadius: '50%', width: '28px', height: '28px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', fontSize: '13px'
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Chips de monto rápido */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginBottom: '18px', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+        <div style={{ 
+          display: 'flex', gap: '8px', overflowX: 'auto', 
+          marginBottom: '18px', padding: '2px 0 6px',
+          scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }}>
           {QUICK_AMOUNTS.map(amt => (
             <button
               key={amt}
               type="button"
               onClick={() => handleQuickAddAmount(amt)}
               style={{
-                padding: '6px 10px',
+                padding: '7px 12px',
                 borderRadius: '12px',
                 border: '1px solid rgba(255,255,255,0.08)',
                 background: 'rgba(255,255,255,0.04)',
-                color: 'var(--text-dim)',
-                fontSize: '0.72rem',
+                color: 'white',
+                fontSize: '0.74rem',
                 fontWeight: '700',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                transition: 'all 0.15s ease'
               }}
+              onPointerDown={e => e.currentTarget.style.transform = 'scale(0.94)'}
+              onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
             >
               +{formatCurrency(amt)}
             </button>
@@ -182,30 +266,32 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
 
         {/* Input Descripción */}
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-            Concepto / Descripción <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(opcional)</span>
+          <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+            Concepto / Nota <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '400' }}>(opcional)</span>
           </label>
           <input
             type="text"
-            placeholder={type === 'income' ? 'Ej: Salario quincena, Venta café...' : 'Ej: Almuerzo, Mercado, Combustible...'}
+            placeholder={type === 'income' ? 'Ej: Salario quincena, Venta café...' : (type === 'transfer' ? 'Ej: Para ahorros, Nequi a Banco...' : 'Ej: Almuerzo, Mercado, Combustible...')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            style={{ borderRadius: '16px' }}
           />
         </div>
 
         {/* Selector de Categorías (para Ingreso o Gasto) */}
         {type !== 'transfer' && (
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '8px' }}>
               Categoría
             </label>
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(4, 1fr)', 
               gap: '8px',
-              maxHeight: '180px',
+              maxHeight: '190px',
               overflowY: 'auto',
-              padding: '2px'
+              padding: '2px',
+              scrollbarWidth: 'none'
             }}>
               {categoryList.map(cat => {
                 const isSelected = category === cat.id;
@@ -215,18 +301,19 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
                     type="button"
                     onClick={() => setCategory(cat.id)}
                     style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                      padding: '10px 4px', borderRadius: '14px', border: '1px solid',
-                      background: isSelected ? `${cat.color}25` : 'rgba(255,255,255,0.03)',
-                      borderColor: isSelected ? cat.color : 'rgba(255,255,255,0.07)',
-                      cursor: 'pointer', transition: 'all 0.18s ease'
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
+                      padding: '10px 4px', borderRadius: '16px',
+                      background: isSelected ? `${cat.color}22` : 'rgba(255,255,255,0.03)',
+                      border: `1.5px solid ${isSelected ? cat.color : 'rgba(255,255,255,0.06)'}`,
+                      cursor: 'pointer', transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                      boxShadow: isSelected ? `0 0 16px ${cat.color}33` : 'none'
                     }}
                   >
-                    <span style={{ fontSize: '1.3rem' }}>{cat.icon}</span>
+                    <span style={{ fontSize: '1.35rem' }}>{cat.icon}</span>
                     <span style={{ 
-                      fontSize: '0.68rem', fontWeight: isSelected ? '700' : '500', 
-                      color: isSelected ? 'white' : 'var(--text-dim)',
-                      textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' 
+                      fontSize: '0.68rem', fontWeight: isSelected ? '800' : '500', 
+                      color: isSelected ? '#ffffff' : 'var(--text-dim)',
+                      textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '90%' 
                     }}>
                       {cat.label}
                     </span>
@@ -239,7 +326,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
 
         {/* Cuenta Origen */}
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
             {type === 'transfer' ? 'Desde (Cuenta Origen)' : 'Cuenta / Método'}
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
@@ -255,16 +342,17 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
                   type="button"
                   onClick={() => setAccountId(acc.id)}
                   style={{
-                    padding: '10px', borderRadius: '12px', border: '1px solid',
-                    background: isSelected ? 'rgba(var(--primary-rgb), 0.15)' : 'rgba(255,255,255,0.03)',
-                    borderColor: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
+                    padding: '11px 8px', borderRadius: '14px',
+                    background: isSelected ? `${currentTheme.color}20` : 'rgba(255,255,255,0.03)',
+                    border: `1.5px solid ${isSelected ? currentTheme.color : 'rgba(255,255,255,0.06)'}`,
                     color: isSelected ? 'white' : 'var(--text-dim)',
-                    fontWeight: isSelected ? '700' : '500',
+                    fontWeight: isSelected ? '800' : '600',
                     fontSize: '0.82rem', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  <span>{acc.icon}</span>
+                  <span style={{ fontSize: '1.1rem' }}>{acc.icon}</span>
                   {acc.label}
                 </button>
               );
@@ -274,7 +362,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
           {/* Sub-selector de Banco específico si la cuenta es Banco */}
           {accountId === 'bank' && banks && banks.length > 0 && (
             <div style={{ marginTop: '10px' }}>
-              <select value={bankId} onChange={e => setBankId(e.target.value)}>
+              <select value={bankId} onChange={e => setBankId(e.target.value)} style={{ borderRadius: '14px' }}>
                 {banks.map(b => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
@@ -286,7 +374,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
         {/* Cuenta Destino (Solo si es Traspaso) */}
         {type === 'transfer' && (
           <div style={{ marginBottom: '18px' }} className="animate-fade">
-            <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
               Hacia (Cuenta Destino)
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
@@ -302,16 +390,17 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
                     type="button"
                     onClick={() => setToAccountId(acc.id)}
                     style={{
-                      padding: '10px', borderRadius: '12px', border: '1px solid',
+                      padding: '11px 8px', borderRadius: '14px',
                       background: isSelected ? 'rgba(0, 122, 255, 0.2)' : 'rgba(255,255,255,0.03)',
-                      borderColor: isSelected ? '#007aff' : 'rgba(255,255,255,0.08)',
+                      border: `1.5px solid ${isSelected ? '#007aff' : 'rgba(255,255,255,0.06)'}`,
                       color: isSelected ? 'white' : 'var(--text-dim)',
-                      fontWeight: isSelected ? '700' : '500',
+                      fontWeight: isSelected ? '800' : '600',
                       fontSize: '0.82rem', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                      transition: 'all 0.15s ease'
                     }}
                   >
-                    <span>{acc.icon}</span>
+                    <span style={{ fontSize: '1.1rem' }}>{acc.icon}</span>
                     {acc.label}
                   </button>
                 );
@@ -320,7 +409,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
 
             {toAccountId === 'bank' && banks && banks.length > 0 && (
               <div style={{ marginTop: '10px' }}>
-                <select value={toBankId} onChange={e => setToBankId(e.target.value)}>
+                <select value={toBankId} onChange={e => setToBankId(e.target.value)} style={{ borderRadius: '14px' }}>
                   {banks.map(b => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
@@ -331,36 +420,49 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
         )}
 
         {/* Fecha y Hora */}
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Calendar size={14} /> Fecha del movimiento
+        <div style={{ marginBottom: '22px' }}>
+          <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Calendar size={14} color="var(--primary)" /> Fecha y Hora
           </label>
           <input
             type="datetime-local"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            style={{ fontSize: '0.9rem' }}
+            style={{ fontSize: '0.9rem', borderRadius: '14px' }}
           />
         </div>
 
-        {/* Botones de acción */}
+        {/* Botones de acción prominentes */}
         <div style={{ display: 'flex', gap: '10px' }}>
           {onCancelEdit && (
             <button
               type="button"
               onClick={onCancelEdit}
               className="btn-secondary"
-              style={{ flex: 1, padding: '16px' }}
+              style={{ flex: 1, padding: '16px', borderRadius: '16px', fontWeight: '700' }}
             >
               Cancelar
             </button>
           )}
           <button
             type="submit"
-            className="btn-primary"
-            style={{ flex: 2, padding: '16px', fontSize: '1rem' }}
+            style={{
+              flex: 2, padding: '16px', borderRadius: '16px',
+              backgroundColor: currentTheme.color,
+              color: '#ffffff',
+              border: 'none',
+              fontWeight: '850',
+              fontSize: '0.98rem',
+              boxShadow: `0 8px 24px ${currentTheme.glow}`,
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              transition: 'transform 0.15s ease'
+            }}
+            onPointerDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+            onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            {editingData ? 'Guardar Cambios' : 'Confirmar Movimiento'}
+            <Check size={18} strokeWidth={3} />
+            {editingData ? 'Guardar Cambios' : currentTheme.submitLabel}
           </button>
         </div>
       </form>

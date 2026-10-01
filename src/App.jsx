@@ -537,11 +537,12 @@ function AppContent() {
 
       {/* Modal de Transacción (Nuevo / Editar) */}
       {(activeTab === 'add_modal' || editingTransaction) && (
-        <div className="modal-overlay">
-          <div className="modal-container">
+        <div className="modal-overlay" onClick={cancelEditing}>
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
+            <div className="modal-drag-handle" />
             <div className="modal-header">
               <h2>{editingTransaction?.id ? 'Editar Movimiento' : 'Nuevo Movimiento'}</h2>
-              <button onClick={cancelEditing}>×</button>
+              <button onClick={cancelEditing} title="Cerrar">✕</button>
             </div>
             <TransactionForm 
               onAddTransaction={handleAddTransaction} 
