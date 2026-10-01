@@ -128,40 +128,40 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
   };
 
   return (
-    <div className="transaction-form animate-fade" style={{ width: '100%', margin: 0, padding: 0 }}>
-      {/* Selector de Tipo (Gasto | Ingreso | Traspaso) Segmented Pills */}
-      <div style={{
-        display: 'flex', gap: '6px',
-        background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '18px', padding: '5px', marginBottom: '18px',
-        border: '1px solid rgba(255, 255, 255, 0.06)'
-      }}>
-        {Object.values(TYPE_CONFIG).map(t => {
-          const isActive = type === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => handleTypeChange(t.id)}
-              style={{
-                flex: 1, padding: '11px 6px', borderRadius: '14px',
-                cursor: 'pointer', fontWeight: isActive ? '800' : '600', fontSize: '0.86rem',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                background: isActive ? t.color : 'transparent',
-                color: isActive ? '#ffffff' : 'var(--text-dim)',
-                border: 'none',
-                boxShadow: isActive ? `0 4px 16px ${t.glow}` : 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-              }}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+    <form onSubmit={handleSubmit} className="transaction-form animate-fade">
+      <div className="modal-scroll-content">
+        {/* Selector de Tipo (Gasto | Ingreso | Traspaso) Segmented Pills */}
+        <div style={{
+          display: 'flex', gap: '6px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '18px', padding: '5px', marginBottom: '18px',
+          border: '1px solid rgba(255, 255, 255, 0.06)'
+        }}>
+          {Object.values(TYPE_CONFIG).map(t => {
+            const isActive = type === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => handleTypeChange(t.id)}
+                style={{
+                  flex: 1, padding: '11px 6px', borderRadius: '14px',
+                  cursor: 'pointer', fontWeight: isActive ? '800' : '600', fontSize: '0.86rem',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  background: isActive ? t.color : 'transparent',
+                  color: isActive ? '#ffffff' : 'var(--text-dim)',
+                  border: 'none',
+                  boxShadow: isActive ? `0 4px 16px ${t.glow}` : 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                }}
+              >
+                {t.icon}
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
 
-      <form onSubmit={handleSubmit}>
         {/* Input Monto Principal - Caja Hero en color activo */}
         <div style={{ marginBottom: '14px' }}>
           <div style={{
@@ -288,10 +288,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
               display: 'grid', 
               gridTemplateColumns: 'repeat(4, 1fr)', 
               gap: '8px',
-              maxHeight: '190px',
-              overflowY: 'auto',
-              padding: '2px',
-              scrollbarWidth: 'none'
+              padding: '2px'
             }}>
               {categoryList.map(cat => {
                 const isSelected = category === cat.id;
@@ -431,42 +428,42 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
             style={{ fontSize: '0.9rem', borderRadius: '14px' }}
           />
         </div>
+      </div>
 
-        {/* Botones de acción prominentes */}
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {onCancelEdit && (
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="btn-secondary"
-              style={{ flex: 1, padding: '16px', borderRadius: '16px', fontWeight: '700' }}
-            >
-              Cancelar
-            </button>
-          )}
+      {/* Botones de acción sticky en la base del modal */}
+      <div className="modal-sticky-actions">
+        {onCancelEdit && (
           <button
-            type="submit"
-            style={{
-              flex: 2, padding: '16px', borderRadius: '16px',
-              backgroundColor: currentTheme.color,
-              color: '#ffffff',
-              border: 'none',
-              fontWeight: '850',
-              fontSize: '0.98rem',
-              boxShadow: `0 8px 24px ${currentTheme.glow}`,
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              transition: 'transform 0.15s ease'
-            }}
-            onPointerDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
-            onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
+            type="button"
+            onClick={onCancelEdit}
+            className="btn-secondary"
+            style={{ flex: 1, padding: '14px', borderRadius: '16px', fontWeight: '700' }}
           >
-            <Check size={18} strokeWidth={3} />
-            {editingData ? 'Guardar Cambios' : currentTheme.submitLabel}
+            Cancelar
           </button>
-        </div>
-      </form>
-    </div>
+        )}
+        <button
+          type="submit"
+          style={{
+            flex: 2, padding: '14px', borderRadius: '16px',
+            backgroundColor: currentTheme.color,
+            color: '#ffffff',
+            border: 'none',
+            fontWeight: '850',
+            fontSize: '0.96rem',
+            boxShadow: `0 8px 24px ${currentTheme.glow}`,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            transition: 'transform 0.15s ease'
+          }}
+          onPointerDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+          onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Check size={18} strokeWidth={3} />
+          {editingData ? 'Guardar Cambios' : currentTheme.submitLabel}
+        </button>
+      </div>
+    </form>
   );
 };
 

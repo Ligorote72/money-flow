@@ -556,7 +556,7 @@ function AppContent() {
       )}
 
       {/* Modern Floating Island Bottom Nav */}
-      <div className="floating-dock-container">
+      <div className={`floating-dock-container ${activeTab === 'add_modal' || editingTransaction ? 'dock-hidden' : ''}`}>
         <nav className="floating-dock">
           {/* Tab 1: Inicio */}
           <button 
