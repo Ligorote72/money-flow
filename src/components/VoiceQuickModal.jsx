@@ -462,8 +462,12 @@ export default function VoiceQuickModal({
                   {parsedResult.description}
                 </span>
               </div>
-              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>
-                {formatCurrency(parsedResult.amount)}
+              <span style={{ 
+                fontSize: '1.2rem', 
+                fontWeight: 800, 
+                color: parsedResult.type === 'income' ? '#4ade80' : parsedResult.type === 'transfer' ? '#60a5fa' : '#fff' 
+              }}>
+                {parsedResult.type === 'income' ? `+ ${formatCurrency(parsedResult.amount)}` : formatCurrency(parsedResult.amount)}
               </span>
             </div>
 
@@ -473,13 +477,13 @@ export default function VoiceQuickModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: 'rgba(196, 251, 109, 0.1)',
-                border: '1px solid rgba(196, 251, 109, 0.25)',
+                background: parsedResult.type === 'income' ? 'rgba(52, 199, 89, 0.15)' : 'rgba(196, 251, 109, 0.1)',
+                border: `1px solid ${parsedResult.type === 'income' ? 'rgba(52, 199, 89, 0.35)' : 'rgba(196, 251, 109, 0.25)'}`,
                 borderRadius: '12px',
                 padding: '8px 12px',
                 marginBottom: '12px',
                 fontSize: '0.78rem',
-                color: '#c4fb6d'
+                color: parsedResult.type === 'income' ? '#86efac' : '#c4fb6d'
               }}>
                 <Zap size={14} style={{ flexShrink: 0 }} />
                 <span>{parsedResult.smartNotice}</span>
@@ -490,7 +494,7 @@ export default function VoiceQuickModal({
             {parsedResult.type !== 'transfer' && (
               <div style={{ marginTop: '12px' }}>
                 <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 600 }}>
-                  ¿De dónde salió el dinero?
+                  {parsedResult.type === 'income' ? '¿A qué cuenta ingresó el dinero?' : '¿De dónde salió el dinero?'}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                   {/* Botón Efectivo */}
@@ -512,8 +516,15 @@ export default function VoiceQuickModal({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700 }}>
                       <Wallet size={14} color="#34c759" /> Efectivo
                     </div>
-                    <span style={{ fontSize: '0.68rem', color: cashBalance >= parsedResult.amount ? '#86efac' : '#f87171' }}>
-                      {cashBalance >= parsedResult.amount ? '✓ Disponible' : `$${(cashBalance / 1000).toFixed(0)}k`}
+                    <span style={{ 
+                      fontSize: '0.68rem', 
+                      color: parsedResult.type === 'income' 
+                        ? '#86efac' 
+                        : (cashBalance >= parsedResult.amount ? '#86efac' : '#f87171') 
+                    }}>
+                      {parsedResult.type === 'income'
+                        ? (selectedMethod === 'cash' ? '✓ Recibir aquí' : (cashBalance < 0 ? `$${(cashBalance / 1000).toFixed(0)}k` : `$${(cashBalance / 1000).toFixed(0)}k`))
+                        : (cashBalance >= parsedResult.amount ? '✓ Disponible' : `$${(cashBalance / 1000).toFixed(0)}k`)}
                     </span>
                   </button>
 
@@ -536,8 +547,15 @@ export default function VoiceQuickModal({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700 }}>
                       <Landmark size={14} color="#60a5fa" /> Banco
                     </div>
-                    <span style={{ fontSize: '0.68rem', color: bankBalance >= parsedResult.amount ? '#93c5fd' : '#f87171' }}>
-                      {bankBalance >= parsedResult.amount ? '✓ Disponible' : `$${(bankBalance / 1000).toFixed(0)}k`}
+                    <span style={{ 
+                      fontSize: '0.68rem', 
+                      color: parsedResult.type === 'income' 
+                        ? '#93c5fd' 
+                        : (bankBalance >= parsedResult.amount ? '#93c5fd' : '#f87171') 
+                    }}>
+                      {parsedResult.type === 'income'
+                        ? (selectedMethod === 'bank' ? '✓ Recibir aquí' : `$${(bankBalance / 1000).toFixed(0)}k`)
+                        : (bankBalance >= parsedResult.amount ? '✓ Disponible' : `$${(bankBalance / 1000).toFixed(0)}k`)}
                     </span>
                   </button>
 
@@ -561,12 +579,12 @@ export default function VoiceQuickModal({
                       <Split size={14} color="#c4fb6d" /> Ambas
                     </div>
                     <span style={{ fontSize: '0.68rem', color: '#c4fb6d' }}>
-                      Dividir pago
+                      {parsedResult.type === 'income' ? 'Dividir ingreso' : 'Dividir pago'}
                     </span>
                   </button>
                 </div>
 
-                {/* Sub-formulario de División de Pago */}
+                {/* Sub-formulario de División de Pago o Ingreso */}
                 {selectedMethod === 'split' && (
                   <div style={{
                     marginTop: '12px',
@@ -576,7 +594,7 @@ export default function VoiceQuickModal({
                     padding: '12px'
                   }}>
                     <div style={{ fontSize: '0.75rem', color: '#c4fb6d', marginBottom: '8px', fontWeight: 600 }}>
-                      ✂️ Especifica cuánto pagaste en cada una:
+                      {parsedResult.type === 'income' ? '✂️ Especifica cuánto ingresó en cada una:' : '✂️ Especifica cuánto pagaste en cada una:'}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
                       <div>
@@ -728,7 +746,13 @@ export default function VoiceQuickModal({
             }}
           >
             <Check size={18} strokeWidth={2.5} />
-            {isSavingDirect ? 'Guardando...' : 'Confirmar'}
+            {isSavingDirect 
+              ? 'Guardando...' 
+              : parsedResult?.type === 'income' 
+                ? 'Confirmar Ingreso' 
+                : parsedResult?.type === 'transfer' 
+                  ? 'Confirmar Traspaso' 
+                  : 'Confirmar Gasto'}
           </button>
         </div>
       </div>

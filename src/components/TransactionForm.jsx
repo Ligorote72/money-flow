@@ -91,7 +91,7 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
       setDescription(editingData.description || '');
       setAmount(editingData.amount ? editingData.amount.toString() : '');
       setType(editingData.type || 'expense');
-      setCategory(editingData.category || 'other_expense');
+      setCategory(editingData.category || (editingData.type === 'income' ? 'other_income' : (editingData.type === 'transfer' ? 'transfer' : 'other_expense')));
       setAccountId(editingData.accountId?.startsWith('bank_') || editingData.accountId === 'general' ? 'bank' : editingData.accountId || 'cash');
       if (editingData.accountId?.startsWith('bank_') || editingData.accountId === 'general') {
         setBankId(editingData.accountId);

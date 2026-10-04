@@ -166,6 +166,7 @@ function AppContent() {
 
   const handleDirectSaveVoice = async (parsed) => {
     if (!parsed) return;
+    const defaultCat = parsed.type === 'income' ? 'other_income' : (parsed.type === 'transfer' ? 'transfer' : 'other_expense');
     if (parsed.isSplit && parsed.splitCash > 0 && parsed.splitBank > 0) {
       // Registrar porción en Efectivo
       await addTransaction({
@@ -173,7 +174,7 @@ function AppContent() {
         description: `${parsed.description} (Efectivo)`,
         amount: parsed.splitCash,
         type: parsed.type || 'expense',
-        category: parsed.category || 'other_expense',
+        category: parsed.category || defaultCat,
         accountId: 'cash',
         date: new Date().toISOString()
       });
@@ -183,7 +184,7 @@ function AppContent() {
         description: `${parsed.description} (Banco)`,
         amount: parsed.splitBank,
         type: parsed.type || 'expense',
-        category: parsed.category || 'other_expense',
+        category: parsed.category || defaultCat,
         accountId: 'bank',
         date: new Date().toISOString()
       });
@@ -193,7 +194,7 @@ function AppContent() {
         description: parsed.description,
         amount: parsed.amount,
         type: parsed.type || 'expense',
-        category: parsed.category || 'other_expense',
+        category: parsed.category || defaultCat,
         accountId: parsed.accountId || 'cash',
         toAccountId: parsed.toAccountId,
         date: new Date().toISOString()
