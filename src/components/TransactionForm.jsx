@@ -54,7 +54,7 @@ const getLocalDatetimeString = (dateInput = new Date()) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = null, banks = [] }) => {
+const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = null, banks = [], accountBalances = null }) => {
   const [description, setDescription] = useState('');
   const [amount,      setAmount]      = useState('');
   const [type,        setType]        = useState('expense');
@@ -184,6 +184,9 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
         isOpen={isVoiceModalOpen} 
         onClose={() => setIsVoiceModalOpen(false)} 
         onApplyTransaction={handleApplyVoiceTransaction} 
+        onDirectSave={onAddTransaction}
+        accountBalances={accountBalances}
+        banks={banks}
       />
 
       {/* Selector de Tipo (Gasto | Ingreso | Traspaso) Segmented Pills */}

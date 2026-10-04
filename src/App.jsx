@@ -164,6 +164,43 @@ function AppContent() {
     });
   };
 
+  const handleDirectSaveVoice = async (parsed) => {
+    if (!parsed) return;
+    if (parsed.isSplit && parsed.splitCash > 0 && parsed.splitBank > 0) {
+      // Registrar porción en Efectivo
+      await addTransaction({
+        id: Date.now().toString(),
+        description: `${parsed.description} (Efectivo)`,
+        amount: parsed.splitCash,
+        type: parsed.type || 'expense',
+        category: parsed.category || 'other_expense',
+        accountId: 'cash',
+        date: new Date().toISOString()
+      });
+      // Registrar porción en Banco
+      await addTransaction({
+        id: (Date.now() + 1).toString(),
+        description: `${parsed.description} (Banco)`,
+        amount: parsed.splitBank,
+        type: parsed.type || 'expense',
+        category: parsed.category || 'other_expense',
+        accountId: 'bank',
+        date: new Date().toISOString()
+      });
+    } else {
+      await addTransaction({
+        id: Date.now().toString(),
+        description: parsed.description,
+        amount: parsed.amount,
+        type: parsed.type || 'expense',
+        category: parsed.category || 'other_expense',
+        accountId: parsed.accountId || 'cash',
+        toAccountId: parsed.toAccountId,
+        date: new Date().toISOString()
+      });
+    }
+  };
+
   const addBankTransaction = async (txData) => {
     await addTransaction({
       ...txData,
@@ -609,7 +646,10 @@ function AppContent() {
         isOpen={isVoiceModalOpen} 
         onClose={() => setIsVoiceModalOpen(false)} 
         onApplyTransaction={handleApplyVoiceTransaction} 
+        onDirectSave={handleDirectSaveVoice}
         autoStart={true}
+        accountBalances={accountBalances}
+        banks={banks}
       />
 
       {/* Modal de Transacción (Nuevo / Editar) */}
@@ -627,6 +667,7 @@ function AppContent() {
               onCancelEdit={cancelEditing} 
               accounts={ACCOUNTS} 
               banks={banks} 
+              accountBalances={accountBalances}
             />
           </div>
         </div>

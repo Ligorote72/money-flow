@@ -61,15 +61,20 @@ export function detectCategory(text, type = 'expense') {
     { id: 'food', keywords: ['almuerzo', 'comida', 'cena', 'desayuno', 'restaurante', 'mercado', 'hamburguesa', 'pizza', 'café', 'panadería', 'supermercado', 'tienda', 'onces'] },
     { id: 'transport', keywords: ['taxi', 'uber', 'didi', 'gasolina', 'bus', 'pasaje', 'transmilenio', 'metro', 'peaje', 'parqueadero', 'moto'] },
     { id: 'entertainment', keywords: ['cine', 'fiesta', 'cerveza', 'rumba', 'bar', 'juego', 'salida', 'netflix', 'spotify', 'discoteca'] },
-    { id: 'utilities', keywords: ['luz', 'agua', 'gas', 'internet', 'claro', 'tigo', 'movistar', 'recibo', 'factura', 'servicios', 'arriendo'] },
+    { id: 'utilities', keywords: ['luz', 'agua', '\\bgas\\b', 'internet', 'claro', 'tigo', 'movistar', 'recibo', 'factura', 'servicios', 'arriendo'] },
     { id: 'health', keywords: ['farmacia', 'droguería', 'médico', 'medicina', 'pastillas', 'cita', 'dentista', 'hospital'] },
-    { id: 'shopping', keywords: ['ropa', 'zapatos', 'camisa', 'pantalón', 'compras', 'mall', 'centro comercial'] },
-    { id: 'salary', keywords: ['sueldo', 'salario', 'nómina', 'quincena', 'pago'] },
+    { id: 'shopping', keywords: ['ropa', 'zapatos', 'camisa', 'pantalón', 'compras', 'mall', 'centro comercial', 'computador', 'celular', 'laptop', 'tecnología', 'audífonos', 'tablet', 'electrónica', 'equipo'] },
+    { id: 'salary', keywords: ['sueldo', 'salario', 'nómina', 'quincena', '\\bpago\\b'] },
     { id: 'freelance', keywords: ['honorarios', 'trabajo extra', 'cliente', 'proyecto', 'venta'] }
   ];
 
   for (const rule of rules) {
-    if (rule.keywords.some(k => t.includes(k))) {
+    if (rule.keywords.some(k => {
+      if (k.startsWith('\\b') || k.endsWith('\\b')) {
+        return new RegExp(k, 'i').test(t);
+      }
+      return new RegExp(`\\b${k}\\b`, 'i').test(t);
+    })) {
       return rule.id;
     }
   }
@@ -78,35 +83,81 @@ export function detectCategory(text, type = 'expense') {
 }
 
 /**
- * Parser principal de intención financiera
+ * Parser principal de intención financiera con inteligencia de saldos
+ * @param {string} rawText - Frase dicha o escrita por el usuario
+ * @param {object} options - Opciones adicionales como { accountBalances: { cash, bank, savings } }
  */
-export function parseFinancialVoiceCommand(rawText) {
+export function parseFinancialVoiceCommand(rawText, options = {}) {
   if (!rawText || typeof rawText !== 'string') return null;
   const text = rawText.trim();
   const lower = text.toLowerCase();
+  const balances = options.accountBalances || null;
 
-  const amount = extractAmount(text);
-  if (!amount || amount <= 0) return null;
+  const totalAmount = extractAmount(text);
+  if (!totalAmount || totalAmount <= 0) return null;
 
-  // 1. DETECCIÓN DE TRASPASOS / TRANSFERENCIAS CRUZADAS
+  // 1. DETECCIÓN DE DIVISIÓN DE PAGO (SPLIT PAYMENT) POR VOZ
   // Ejemplos:
-  // "Le transferí a Juan 200.000 y me pasó en efectivo"
-  // "Pasé 50 mil de mi cuenta a efectivo"
-  // "Saqué 100 mil del cajero a efectivo"
-  // "Cambié 200 mil de efectivo al banco"
-  const isTransferIndicative = 
+  // "Pagué 500 mil, 200 en efectivo y el resto en banco"
+  // "500 mil pesos, 200 en efectivo y 300 en cuenta"
+  // "Pagué 100 mil, mitad efectivo mitad banco"
+  let isSplit = false;
+  let splitCash = 0;
+  let splitBank = 0;
+
+  if (lower.includes('mitad efectivo') || lower.includes('mitad banco') || lower.includes('mitad y mitad')) {
+    isSplit = true;
+    splitCash = Math.round(totalAmount / 2);
+    splitBank = totalAmount - splitCash;
+  } else {
+    // Buscar si menciona cuánto en efectivo y cuánto en banco/cuenta
+    const cashPartMatch = lower.match(/(?:(?:gasté|pagué|puse)?\s*(\d[\d\s.,]*(?:mil|k|lucas|millones|millón)?)\s*(?:en|de|con)?\s*(?:efectivo|plata))/i);
+    const bankPartMatch = lower.match(/(?:(?:gasté|pagué|puse)?\s*(\d[\d\s.,]*(?:mil|k|lucas|millones|millón)?)\s*(?:en|de|por|con)?\s*(?:banco|cuenta|tarjeta|transferencia|nequi|daviplata))/i);
+
+    if (cashPartMatch && bankPartMatch) {
+      let cAmt = extractAmount(cashPartMatch[1]);
+      let bAmt = extractAmount(bankPartMatch[1]);
+      if (cAmt && totalAmount >= 1000 && cAmt < 1000 && cAmt * 1000 <= totalAmount) cAmt *= 1000;
+      if (bAmt && totalAmount >= 1000 && bAmt < 1000 && bAmt * 1000 <= totalAmount) bAmt *= 1000;
+      if (cAmt && bAmt) {
+        isSplit = true;
+        splitCash = cAmt;
+        splitBank = bAmt;
+      }
+    } else if (cashPartMatch && (lower.includes('el resto en banco') || lower.includes('el resto por cuenta') || lower.includes('el resto por transferencia') || lower.includes('resto en cuenta') || lower.includes('resto en banco'))) {
+      let cAmt = extractAmount(cashPartMatch[1]);
+      if (cAmt && totalAmount >= 1000 && cAmt < 1000 && cAmt * 1000 <= totalAmount) cAmt *= 1000;
+      if (cAmt && cAmt < totalAmount) {
+        isSplit = true;
+        splitCash = cAmt;
+        splitBank = totalAmount - cAmt;
+      }
+    } else if (bankPartMatch && (lower.includes('el resto en efectivo') || lower.includes('el resto en plata') || lower.includes('resto en efectivo'))) {
+      let bAmt = extractAmount(bankPartMatch[1]);
+      if (bAmt && totalAmount >= 1000 && bAmt < 1000 && bAmt * 1000 <= totalAmount) bAmt *= 1000;
+      if (bAmt && bAmt < totalAmount) {
+        isSplit = true;
+        splitBank = bAmt;
+        splitCash = totalAmount - bAmt;
+      }
+    }
+  }
+
+  // 2. DETECCIÓN DE TRASPASOS / TRANSFERENCIAS CRUZADAS (Solo si NO es pago dividido)
+  const isTransferIndicative = !isSplit && (
     lower.includes('transferí') || 
     lower.includes('transferi') || 
     lower.includes('traspaso') ||
-    lower.includes('pasé') || 
-    lower.includes('pase') ||
+    lower.includes('pasé de') || 
+    lower.includes('pase de') ||
     lower.includes('cajero') ||
     lower.includes('retiré') ||
     lower.includes('retire') ||
     lower.includes('cambié') ||
     lower.includes('cambie') ||
-    (lower.includes('cuenta') && lower.includes('efectivo')) ||
-    (lower.includes('banco') && lower.includes('efectivo'));
+    (lower.includes('de mi cuenta a efectivo') || lower.includes('de cuenta a efectivo')) ||
+    (lower.includes('de efectivo a mi cuenta') || lower.includes('de efectivo a cuenta'))
+  );
 
   if (isTransferIndicative) {
     let accountId = 'bank';
@@ -123,9 +174,7 @@ export function parseFinancialVoiceCommand(rawText) {
       toAccountId = 'bank';
     }
 
-    // Limpieza de descripción
     let desc = text;
-    // Si menciona a alguien (ej. "Le transferí a Carlos 200 mil...")
     const personMatch = text.match(/(?:a|para)\s+([A-ZÁÉÍÓÚa-záéíóú]+)/i);
     const person = personMatch ? personMatch[1] : '';
 
@@ -139,13 +188,13 @@ export function parseFinancialVoiceCommand(rawText) {
 
     return {
       type: 'transfer',
-      amount,
+      amount: totalAmount,
       accountId,
       toAccountId,
       category: 'transfer',
       description: desc,
       confidence: 0.95,
-      summary: `Traspaso: -$${amount.toLocaleString('es-CO')} de ${accountId === 'bank' ? 'Banco' : 'Efectivo'} ➔ +$${amount.toLocaleString('es-CO')} en ${toAccountId === 'cash' ? 'Efectivo' : 'Banco'}`
+      summary: `Traspaso: -$${totalAmount.toLocaleString('es-CO')} de ${accountId === 'bank' ? 'Banco' : 'Efectivo'} ➔ +$${totalAmount.toLocaleString('es-CO')} en ${toAccountId === 'cash' ? 'Efectivo' : 'Banco'}`
     };
   }
 
@@ -163,31 +212,85 @@ export function parseFinancialVoiceCommand(rawText) {
     lower.includes('quincena');
 
   if (isIncomeIndicative) {
-    const accountId = lower.includes('efectivo') ? 'cash' : 'bank';
+    const hasExplicitCash = /\b(en efectivo|en plata)\b/i.test(lower);
+    const accountId = hasExplicitCash ? 'cash' : 'bank';
     const category = detectCategory(lower, 'income');
     return {
       type: 'income',
-      amount,
+      amount: totalAmount,
       accountId,
       category,
       description: text,
       confidence: 0.9,
-      summary: `Ingreso: +$${amount.toLocaleString('es-CO')} a ${accountId === 'cash' ? 'Efectivo' : 'Banco'}`
+      summary: `Ingreso: +$${totalAmount.toLocaleString('es-CO')} a ${accountId === 'cash' ? 'Efectivo' : 'Banco'}`
     };
   }
 
-  // 3. DETECCIÓN DE GASTOS (Por defecto en lenguaje cotidiano)
-  // Ej: "Pagué 15.000 del almuerzo en efectivo"
-  const accountId = lower.includes('efectivo') ? 'cash' : (lower.includes('tarjeta') || lower.includes('cuenta') || lower.includes('banco') ? 'bank' : 'cash');
+  // 3. DETECCIÓN DE GASTOS Y ASIGNACIÓN INTELIGENTE DE CUENTA
+  const hasExplicitCash = /\b(en efectivo|con efectivo|en plata)\b/i.test(lower);
+  const hasExplicitBank = /\b(con tarjeta|por tarjeta|en tarjeta|de la cuenta|de mi cuenta|por transferencia|en el banco|del banco|por nequi|por daviplata|por bancolombia)\b/i.test(lower);
+
+  let accountId = 'cash';
+  let smartNotice = null;
+  let requiresClarification = false;
+
+  const cashBalance = balances ? (balances.cash || 0) : null;
+  const bankBalance = balances ? (balances.bank || 0) : null;
+
+  if (hasExplicitCash) {
+    accountId = 'cash';
+    if (cashBalance !== null && cashBalance < totalAmount) {
+      smartNotice = `⚠️ Mencionaste Efectivo, pero tu saldo actual es de $${cashBalance.toLocaleString('es-CO')}.`;
+    }
+  } else if (hasExplicitBank) {
+    accountId = 'bank';
+  } else {
+    // El usuario NO especificó cuenta -> LÓGICA DE SALDOS REALES
+    if (balances !== null) {
+      if (cashBalance <= 0 && bankBalance >= totalAmount) {
+        // Caso: Sin efectivo, pero con fondos en el banco
+        accountId = 'bank';
+        smartNotice = `💡 Asignado a Banco: no tienes saldo en efectivo ($${cashBalance.toLocaleString('es-CO')}) y en banco tienes $${bankBalance.toLocaleString('es-CO')}.`;
+      } else if (cashBalance < totalAmount && bankBalance >= totalAmount) {
+        // Caso: Efectivo insuficiente, banco suficiente
+        accountId = 'bank';
+        smartNotice = `💡 Asignado a Banco: tu efectivo ($${cashBalance.toLocaleString('es-CO')}) no cubre los $${totalAmount.toLocaleString('es-CO')}.`;
+        requiresClarification = true;
+      } else if (bankBalance < totalAmount && cashBalance >= totalAmount) {
+        // Caso: Banco insuficiente, efectivo suficiente
+        accountId = 'cash';
+        smartNotice = `💡 Asignado a Efectivo: tu banco ($${bankBalance.toLocaleString('es-CO')}) no cubre el valor total.`;
+      } else if (cashBalance > 0 && bankBalance > 0) {
+        // Ambos tienen fondos
+        requiresClarification = true;
+        accountId = cashBalance >= totalAmount ? 'cash' : 'bank';
+        smartNotice = `¿Deseas pagarlo en Efectivo, Banco o Dividirlo en ambas?`;
+      } else {
+        accountId = 'cash';
+      }
+    } else {
+      accountId = 'cash';
+    }
+  }
+
   const category = detectCategory(lower, 'expense');
 
   return {
     type: 'expense',
-    amount,
+    amount: totalAmount,
     accountId,
     category,
     description: text,
-    confidence: 0.88,
-    summary: `Gasto: -$${amount.toLocaleString('es-CO')} desde ${accountId === 'cash' ? 'Efectivo' : 'Banco'}`
+    confidence: 0.9,
+    isSplit,
+    splitCash,
+    splitBank,
+    smartNotice,
+    requiresClarification,
+    cashBalance,
+    bankBalance,
+    summary: isSplit 
+      ? `Gasto Dividido: $${totalAmount.toLocaleString('es-CO')} ($${splitCash.toLocaleString('es-CO')} Efectivo + $${splitBank.toLocaleString('es-CO')} Banco)`
+      : `Gasto: -$${totalAmount.toLocaleString('es-CO')} desde ${accountId === 'cash' ? 'Efectivo' : 'Banco'}`
   };
 }

@@ -1,16 +1,54 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Sparkles, X, ArrowRight, Check, AlertCircle, ArrowLeftRight, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Mic, MicOff, Sparkles, X, ArrowRight, Check, AlertCircle, ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Wallet, Landmark, Split, Zap } from 'lucide-react';
 import { parseFinancialVoiceCommand } from '../utils/aiVoiceParser.js';
 import { formatCurrency } from '../utils/helpers';
 
-export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, autoStart = false }) {
+export default function VoiceQuickModal({ 
+  isOpen, 
+  onClose, 
+  onApplyTransaction, 
+  onDirectSave, 
+  autoStart = false, 
+  accountBalances = null, 
+  banks = [] 
+}) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [parsedResult, setParsedResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [selectedMethod, setSelectedMethod] = useState('cash'); // 'cash' | 'bank' | 'split'
+  const [splitCash, setSplitCash] = useState(0);
+  const [splitBank, setSplitBank] = useState(0);
+  const [isSavingDirect, setIsSavingDirect] = useState(false);
   const recognitionRef = useRef(null);
 
-  // Initialize SpeechRecognition if available
+  const cashBalance = accountBalances ? (accountBalances.cash || 0) : 0;
+  const bankBalance = accountBalances ? (accountBalances.bank || 0) : 0;
+
+  // Sincronizar el resultado cuando se analiza el comando
+  const updateParsed = (rawText) => {
+    if (!rawText || !rawText.trim()) {
+      setParsedResult(null);
+      return;
+    }
+    const res = parseFinancialVoiceCommand(rawText, { accountBalances });
+    setParsedResult(res);
+
+    if (res && res.amount > 0) {
+      if (res.isSplit) {
+        setSelectedMethod('split');
+        setSplitCash(res.splitCash || Math.round(res.amount / 2));
+        setSplitBank(res.splitBank || (res.amount - Math.round(res.amount / 2)));
+      } else {
+        setSelectedMethod(res.accountId || 'cash');
+        const defaultCashPart = cashBalance > 0 ? Math.min(cashBalance, Math.round(res.amount / 2)) : 0;
+        setSplitCash(defaultCashPart);
+        setSplitBank(res.amount - defaultCashPart);
+      }
+    }
+  };
+
+  // Inicializar SpeechRecognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -30,8 +68,7 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
           currentText += event.results[i][0].transcript;
         }
         setTranscript(currentText);
-        const parsed = parseFinancialVoiceCommand(currentText);
-        setParsedResult(parsed);
+        updateParsed(currentText);
       };
 
       recognition.onerror = (event) => {
@@ -50,9 +87,9 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
 
       recognitionRef.current = recognition;
     }
-  }, []);
+  }, [accountBalances]);
 
-  // Auto-start listening if autoStart is true when modal opens
+  // Auto-inicio de escucha si autoStart es true
   useEffect(() => {
     if (isOpen && autoStart && recognitionRef.current && !isListening) {
       const timer = setTimeout(() => {
@@ -70,12 +107,10 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
     }
   }, [isOpen, autoStart]);
 
-  // Update parsed result when user types manually
   const handleTextChange = (e) => {
     const val = e.target.value;
     setTranscript(val);
-    const parsed = parseFinancialVoiceCommand(val);
-    setParsedResult(parsed);
+    updateParsed(val);
   };
 
   const toggleListening = () => {
@@ -99,9 +134,100 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
     }
   };
 
-  const handleConfirm = () => {
+  const handleMethodSelect = (method) => {
+    setSelectedMethod(method);
     if (!parsedResult) return;
-    onApplyTransaction(parsedResult);
+
+    if (method === 'split') {
+      const initCash = cashBalance > 0 ? Math.min(cashBalance, Math.round(parsedResult.amount / 2)) : Math.round(parsedResult.amount / 2);
+      const initBank = parsedResult.amount - initCash;
+      setSplitCash(initCash);
+      setSplitBank(initBank);
+      setParsedResult(prev => ({
+        ...prev,
+        isSplit: true,
+        splitCash: initCash,
+        splitBank: initBank
+      }));
+    } else {
+      setParsedResult(prev => ({
+        ...prev,
+        isSplit: false,
+        accountId: method
+      }));
+    }
+  };
+
+  const handleCashSplitChange = (val) => {
+    const num = Math.max(0, parseInt(val.replace(/\D/g, '') || '0', 10));
+    if (!parsedResult) return;
+    const finalCash = Math.min(num, parsedResult.amount);
+    const finalBank = parsedResult.amount - finalCash;
+    setSplitCash(finalCash);
+    setSplitBank(finalBank);
+    setParsedResult(prev => ({
+      ...prev,
+      isSplit: true,
+      splitCash: finalCash,
+      splitBank: finalBank
+    }));
+  };
+
+  const handleBankSplitChange = (val) => {
+    const num = Math.max(0, parseInt(val.replace(/\D/g, '') || '0', 10));
+    if (!parsedResult) return;
+    const finalBank = Math.min(num, parsedResult.amount);
+    const finalCash = parsedResult.amount - finalBank;
+    setSplitBank(finalBank);
+    setSplitCash(finalCash);
+    setParsedResult(prev => ({
+      ...prev,
+      isSplit: true,
+      splitCash: finalCash,
+      splitBank: finalBank
+    }));
+  };
+
+  const getPayload = () => {
+    if (!parsedResult) return null;
+    if (selectedMethod === 'split') {
+      return {
+        ...parsedResult,
+        isSplit: true,
+        splitCash,
+        splitBank
+      };
+    }
+    return {
+      ...parsedResult,
+      isSplit: false,
+      accountId: selectedMethod
+    };
+  };
+
+  const handleDirectSave = async () => {
+    const payload = getPayload();
+    if (!payload) return;
+    setIsSavingDirect(true);
+    try {
+      if (onDirectSave) {
+        await onDirectSave(payload);
+      } else if (onApplyTransaction) {
+        onApplyTransaction(payload);
+      }
+      onClose();
+    } catch (e) {
+      console.error('Error in onDirectSave:', e);
+      setErrorMsg('No se pudo guardar el movimiento directamente.');
+    } finally {
+      setIsSavingDirect(false);
+    }
+  };
+
+  const handleApplyToForm = () => {
+    const payload = getPayload();
+    if (!payload) return;
+    onApplyTransaction(payload);
     onClose();
   };
 
@@ -114,8 +240,8 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.75)',
-      backdropFilter: 'blur(8px)',
+      backgroundColor: 'rgba(0, 0, 0, 0.78)',
+      backdropFilter: 'blur(10px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -123,29 +249,31 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
       padding: '16px'
     }}>
       <div style={{
-        background: 'linear-gradient(145deg, rgba(18, 24, 38, 0.95), rgba(12, 16, 26, 0.98))',
-        border: '1px solid rgba(196, 251, 109, 0.25)',
-        boxShadow: '0 20px 45px rgba(0, 0, 0, 0.6), 0 0 30px rgba(196, 251, 109, 0.1)',
-        borderRadius: '24px',
+        background: 'linear-gradient(155deg, rgba(20, 26, 40, 0.98), rgba(10, 14, 24, 0.99))',
+        border: '1px solid rgba(196, 251, 109, 0.3)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(196, 251, 109, 0.12)',
+        borderRadius: '26px',
         width: '100%',
-        maxWidth: '460px',
+        maxWidth: '480px',
+        maxHeight: '92vh',
+        overflowY: 'auto',
         padding: '24px',
         color: '#fff',
         position: 'relative',
         animation: 'fadeIn 0.2s ease-out'
       }}>
-        {/* Close Button */}
+        {/* Botón Cerrar */}
         <button
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '16px',
-            right: '16px',
+            top: '18px',
+            right: '18px',
             background: 'rgba(255, 255, 255, 0.08)',
             border: 'none',
             borderRadius: '50%',
-            width: '32px',
-            height: '32px',
+            width: '34px',
+            height: '34px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -156,34 +284,68 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
           <X size={18} />
         </button>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+        {/* Encabezado */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
           <div style={{
             background: 'rgba(196, 251, 109, 0.15)',
             color: '#c4fb6d',
-            padding: '8px',
-            borderRadius: '12px',
+            padding: '10px',
+            borderRadius: '14px',
             display: 'flex'
           }}>
-            <Sparkles size={20} />
+            <Sparkles size={22} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff', margin: 0 }}>
-              Registro Rápido con IA
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+              Asistente de Voz & IA
             </h3>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0 0' }}>
-              Habla o escribe como si le hablaras a un amigo
+              Dicta tu movimiento de forma natural
             </p>
           </div>
         </div>
 
-        {/* Mic Visualizer Button */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '24px 0' }}>
+        {/* Barra de Saldos en Tiempo Real */}
+        {accountBalances && (
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '14px',
+            padding: '8px 12px',
+            marginBottom: '16px',
+            fontSize: '0.78rem'
+          }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '1rem' }}>💵</span>
+              <div>
+                <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Efectivo</div>
+                <div style={{ fontWeight: 700, color: cashBalance > 0 ? '#34c759' : '#f87171' }}>
+                  {formatCurrency(cashBalance)}
+                </div>
+              </div>
+            </div>
+            <div style={{ width: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '1rem' }}>🏛️</span>
+              <div>
+                <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Banco / Cuentas</div>
+                <div style={{ fontWeight: 700, color: bankBalance > 0 ? '#60a5fa' : '#f87171' }}>
+                  {formatCurrency(bankBalance)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Botón Micrófono Animado */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '14px 0 18px 0' }}>
           <button
             onClick={toggleListening}
             style={{
-              width: '80px',
-              height: '80px',
+              width: '78px',
+              height: '78px',
               borderRadius: '50%',
               background: isListening 
                 ? 'linear-gradient(135deg, #ff3b30, #ff6b60)' 
@@ -195,25 +357,25 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: isListening 
-                ? '0 0 25px rgba(255, 59, 48, 0.5)' 
-                : '0 0 25px rgba(196, 251, 109, 0.4)',
+                ? '0 0 30px rgba(255, 59, 48, 0.6)' 
+                : '0 0 30px rgba(196, 251, 109, 0.45)',
               transition: 'all 0.25s ease',
               transform: isListening ? 'scale(1.08)' : 'scale(1)'
             }}
           >
             {isListening ? <Mic size={34} strokeWidth={2.5} /> : <Mic size={34} strokeWidth={2.2} />}
           </button>
-          <span style={{ fontSize: '0.85rem', color: isListening ? '#ff6b60' : '#c4fb6d', marginTop: '12px', fontWeight: 500 }}>
-            {isListening ? 'Escuchando... Di tu movimiento' : 'Toca el micrófono para hablar'}
+          <span style={{ fontSize: '0.85rem', color: isListening ? '#ff6b60' : '#c4fb6d', marginTop: '10px', fontWeight: 600 }}>
+            {isListening ? 'Escuchando... Di tu movimiento' : 'Toca para hablar'}
           </span>
         </div>
 
-        {/* Text Input & Transcription */}
-        <div style={{ marginBottom: '16px' }}>
+        {/* Input de Texto / Frase */}
+        <div style={{ marginBottom: '14px' }}>
           <textarea
             value={transcript}
             onChange={handleTextChange}
-            placeholder='Ej: "Le transferí a Carlos 200.000 y me los dio en efectivo" o "Almuerzo 15 mil en efectivo"'
+            placeholder='Ej: "Gasté 500 mil en pagar el computador" o "200 mil, mitad efectivo mitad banco"'
             rows={2}
             style={{
               width: '100%',
@@ -230,18 +392,18 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
           />
         </div>
 
-        {/* Quick Suggestion Chips */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '18px' }}>
+        {/* Chips de Sugerencia Rápida */}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
           {[
-            'Transferí 200k a Juan y me dio efectivo',
-            'Almuerzo 18 mil en efectivo',
-            'Pasé 50 mil de la cuenta a efectivo'
+            'Gasté 500 mil en el computador',
+            'Pagué 100k, mitad efectivo mitad banco',
+            'Transferí 200k a Juan y me dio efectivo'
           ].map((chip, idx) => (
             <button
               key={idx}
               onClick={() => {
                 setTranscript(chip);
-                setParsedResult(parseFinancialVoiceCommand(chip));
+                updateParsed(chip);
               }}
               style={{
                 fontSize: '0.72rem',
@@ -258,7 +420,7 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
           ))}
         </div>
 
-        {/* Error message */}
+        {/* Error */}
         {errorMsg && (
           <div style={{
             display: 'flex',
@@ -273,52 +435,242 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
           </div>
         )}
 
-        {/* Detected Result Card */}
+        {/* Tarjeta del Movimiento Detectado */}
         {parsedResult && (
           <div style={{
-            background: parsedResult.type === 'transfer' 
-              ? 'rgba(0, 122, 255, 0.12)' 
-              : parsedResult.type === 'income' 
-                ? 'rgba(52, 199, 89, 0.12)' 
-                : 'rgba(255, 59, 48, 0.12)',
-            border: `1px solid ${parsedResult.type === 'transfer' ? '#007aff' : parsedResult.type === 'income' ? '#34c759' : '#ff3b30'}`,
-            borderRadius: '16px',
-            padding: '14px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '18px',
+            padding: '16px',
             marginBottom: '18px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{
-                fontSize: '0.75rem',
-                textTransform: 'uppercase',
-                fontWeight: 700,
-                color: parsedResult.type === 'transfer' ? '#60a5fa' : parsedResult.type === 'income' ? '#4ade80' : '#f87171'
-              }}>
-                {parsedResult.type === 'transfer' ? 'Traspaso entre Cuentas' : parsedResult.type === 'income' ? 'Ingreso' : 'Gasto'}
-              </span>
-              <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
+            {/* Header del Movimiento */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                  padding: '3px 8px',
+                  borderRadius: '8px',
+                  background: parsedResult.type === 'transfer' ? 'rgba(0, 122, 255, 0.2)' : parsedResult.type === 'income' ? 'rgba(52, 199, 89, 0.2)' : 'rgba(255, 59, 48, 0.2)',
+                  color: parsedResult.type === 'transfer' ? '#60a5fa' : parsedResult.type === 'income' ? '#4ade80' : '#f87171'
+                }}>
+                  {parsedResult.type === 'transfer' ? 'Traspaso' : parsedResult.type === 'income' ? 'Ingreso' : 'Gasto'}
+                </span>
+                <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                  {parsedResult.description}
+                </span>
+              </div>
+              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>
                 {formatCurrency(parsedResult.amount)}
               </span>
             </div>
 
-            <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
-              {parsedResult.type === 'transfer' ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>{parsedResult.accountId === 'bank' ? '🏛️ Banco' : '💵 Efectivo'}</span>
-                  <ArrowRight size={14} color="#60a5fa" />
-                  <span>{parsedResult.toAccountId === 'cash' ? '💵 Efectivo' : '🏛️ Banco'}</span>
-                </div>
-              ) : (
-                <div>Cuenta: {parsedResult.accountId === 'cash' ? '💵 Efectivo' : '🏛️ Banco'}</div>
-              )}
-            </div>
+            {/* Aviso Inteligente si no había saldo en efectivo o hubo sugerencia */}
+            {parsedResult.smartNotice && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(196, 251, 109, 0.1)',
+                border: '1px solid rgba(196, 251, 109, 0.25)',
+                borderRadius: '12px',
+                padding: '8px 12px',
+                marginBottom: '12px',
+                fontSize: '0.78rem',
+                color: '#c4fb6d'
+              }}>
+                <Zap size={14} style={{ flexShrink: 0 }} />
+                <span>{parsedResult.smartNotice}</span>
+              </div>
+            )}
 
-            <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '6px' }}>
-              {parsedResult.description}
-            </div>
+            {/* Selector de Cuenta / Método (Solo si es Gasto o Ingreso) */}
+            {parsedResult.type !== 'transfer' && (
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 600 }}>
+                  ¿De dónde salió el dinero?
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  {/* Botón Efectivo */}
+                  <button
+                    onClick={() => handleMethodSelect('cash')}
+                    style={{
+                      background: selectedMethod === 'cash' ? 'rgba(52, 199, 89, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${selectedMethod === 'cash' ? '#34c759' : 'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '12px',
+                      padding: '10px 6px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700 }}>
+                      <Wallet size={14} color="#34c759" /> Efectivo
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: cashBalance >= parsedResult.amount ? '#86efac' : '#f87171' }}>
+                      {cashBalance >= parsedResult.amount ? '✓ Disponible' : `$${(cashBalance / 1000).toFixed(0)}k`}
+                    </span>
+                  </button>
+
+                  {/* Botón Banco */}
+                  <button
+                    onClick={() => handleMethodSelect('bank')}
+                    style={{
+                      background: selectedMethod === 'bank' ? 'rgba(0, 122, 255, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${selectedMethod === 'bank' ? '#007aff' : 'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '12px',
+                      padding: '10px 6px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700 }}>
+                      <Landmark size={14} color="#60a5fa" /> Banco
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: bankBalance >= parsedResult.amount ? '#93c5fd' : '#f87171' }}>
+                      {bankBalance >= parsedResult.amount ? '✓ Disponible' : `$${(bankBalance / 1000).toFixed(0)}k`}
+                    </span>
+                  </button>
+
+                  {/* Botón Dividir (Ambas) */}
+                  <button
+                    onClick={() => handleMethodSelect('split')}
+                    style={{
+                      background: selectedMethod === 'split' ? 'rgba(196, 251, 109, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${selectedMethod === 'split' ? '#c4fb6d' : 'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '12px',
+                      padding: '10px 6px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700 }}>
+                      <Split size={14} color="#c4fb6d" /> Ambas
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: '#c4fb6d' }}>
+                      Dividir pago
+                    </span>
+                  </button>
+                </div>
+
+                {/* Sub-formulario de División de Pago */}
+                {selectedMethod === 'split' && (
+                  <div style={{
+                    marginTop: '12px',
+                    background: 'rgba(0, 0, 0, 0.25)',
+                    border: '1px solid rgba(196, 251, 109, 0.2)',
+                    borderRadius: '14px',
+                    padding: '12px'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', color: '#c4fb6d', marginBottom: '8px', fontWeight: 600 }}>
+                      ✂️ Especifica cuánto pagaste en cada una:
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
+                          💵 En Efectivo
+                        </label>
+                        <input
+                          type="text"
+                          value={splitCash.toLocaleString('es-CO')}
+                          onChange={(e) => handleCashSplitChange(e.target.value)}
+                          style={{
+                            width: '100%',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            borderRadius: '10px',
+                            padding: '8px 10px',
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            fontWeight: 700
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
+                          🏛️ En Banco / Cuenta
+                        </label>
+                        <input
+                          type="text"
+                          value={splitBank.toLocaleString('es-CO')}
+                          onChange={(e) => handleBankSplitChange(e.target.value)}
+                          style={{
+                            width: '100%',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            borderRadius: '10px',
+                            padding: '8px 10px',
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            fontWeight: 700
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Atajos de división */}
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => {
+                          const half = Math.round(parsedResult.amount / 2);
+                          setSplitCash(half);
+                          setSplitBank(parsedResult.amount - half);
+                          setParsedResult(prev => ({ ...prev, isSplit: true, splitCash: half, splitBank: parsedResult.amount - half }));
+                        }}
+                        style={{
+                          fontSize: '0.7rem',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#cbd5e1',
+                          padding: '4px 8px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        50% / 50%
+                      </button>
+                      {cashBalance > 0 && cashBalance < parsedResult.amount && (
+                        <button
+                          onClick={() => {
+                            setSplitCash(cashBalance);
+                            setSplitBank(parsedResult.amount - cashBalance);
+                            setParsedResult(prev => ({ ...prev, isSplit: true, splitCash: cashBalance, splitBank: parsedResult.amount - cashBalance }));
+                          }}
+                          style={{
+                            fontSize: '0.7rem',
+                            background: 'rgba(52, 199, 89, 0.15)',
+                            border: '1px solid rgba(52, 199, 89, 0.3)',
+                            borderRadius: '8px',
+                            color: '#86efac',
+                            padding: '4px 8px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Todo mi efectivo ({formatCurrency(cashBalance)}) + Resto banco
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Botones de Acción */}
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             onClick={onClose}
@@ -329,15 +681,36 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
               background: 'rgba(255, 255, 255, 0.08)',
               color: '#94a3b8',
               border: 'none',
-              fontWeight: 500,
+              fontWeight: 600,
               cursor: 'pointer'
             }}
           >
             Cancelar
           </button>
+
+          {/* Botón Aplicar en Formulario */}
           <button
-            onClick={handleConfirm}
+            onClick={handleApplyToForm}
             disabled={!parsedResult}
+            style={{
+              flex: 1,
+              padding: '12px',
+              borderRadius: '14px',
+              background: 'rgba(255, 255, 255, 0.12)',
+              color: parsedResult ? '#fff' : '#64748b',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              cursor: parsedResult ? 'pointer' : 'not-allowed'
+            }}
+          >
+            Formulario
+          </button>
+
+          {/* Botón Guardar Directo */}
+          <button
+            onClick={handleDirectSave}
+            disabled={!parsedResult || isSavingDirect}
             style={{
               flex: 2,
               padding: '12px',
@@ -346,16 +719,16 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, a
               color: parsedResult ? '#090c15' : '#64748b',
               border: 'none',
               fontWeight: 700,
-              cursor: parsedResult ? 'pointer' : 'not-allowed',
+              cursor: (parsedResult && !isSavingDirect) ? 'pointer' : 'not-allowed',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              boxShadow: parsedResult ? '0 4px 15px rgba(196, 251, 109, 0.3)' : 'none'
+              boxShadow: parsedResult ? '0 4px 15px rgba(196, 251, 109, 0.35)' : 'none'
             }}
           >
             <Check size={18} strokeWidth={2.5} />
-            Aplicar al Formulario
+            {isSavingDirect ? 'Guardando...' : 'Confirmar'}
           </button>
         </div>
       </div>
