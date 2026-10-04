@@ -72,13 +72,13 @@ export function detectCategory(text, type = 'expense') {
   }
 
   const rules = [
-    { id: 'food', keywords: ['almuerzo', 'comida', 'cena', 'desayuno', 'restaurante', 'mercado', 'hamburguesa', 'pizza', 'cafe', 'panaderia', 'supermercado', 'tienda', 'onces'] },
-    { id: 'transport', keywords: ['taxi', 'uber', 'didi', 'gasolina', 'bus', 'pasaje', 'transmilenio', 'metro', 'peaje', 'parqueadero', 'moto'] },
-    { id: 'entertainment', keywords: ['cine', 'fiesta', 'cerveza', 'rumba', 'bar', 'juego', 'salida', 'netflix', 'spotify', 'discoteca'] },
-    { id: 'utilities', keywords: ['luz', 'agua', '\\bgas\\b', 'internet', 'claro', 'tigo', 'movistar', 'recibo', 'factura', 'servicios', 'arriendo'] },
-    { id: 'health', keywords: ['farmacia', 'drogueria', 'medico', 'medicina', 'pastillas', 'cita', 'dentista', 'hospital'] },
-    { id: 'clothing', keywords: ['ropa', 'zapatos', 'camisa', 'pantalon', 'chaqueta', 'tenis', 'vestido'] },
-    { id: 'shopping', keywords: ['compras', 'mall', 'centro comercial', 'computador', 'celular', 'laptop', 'tecnologia', 'audifonos', 'tablet', 'electronica', 'equipo'] }
+    { id: 'food', keywords: ['almuerzo[s]?', 'comida[s]?', 'cena[s]?', 'desayuno[s]?', 'restaurante[s]?', 'mercado[s]?', 'hamburguesa[s]?', 'pizza[s]?', 'cafe[s]?', 'panaderia[s]?', 'supermercado[s]?', 'tienda[s]?', 'onces', 'gaseosa[s]?', 'mecato', 'pan[es]?'] },
+    { id: 'transport', keywords: ['taxi[s]?', 'uber', 'didi', 'gasolina', 'bus[es]?', 'pasaje[s]?', 'transmilenio', 'metro', 'peaje[s]?', 'parqueadero[s]?', 'moto[s]?', 'carro[s]?', 'taller', 'aceite', 'llanta[s]?'] },
+    { id: 'entertainment', keywords: ['cine', 'fiesta[s]?', 'cerveza[s]?', 'pola[s]?', 'rumba', 'bar[es]?', 'juego[s]?', 'salida[s]?', 'netflix', 'spotify', 'discoteca[s]?', 'paseo[s]?'] },
+    { id: 'utilities', keywords: ['luz', 'agua', '\\bgas\\b', 'internet', 'claro', 'tigo', 'movistar', 'recibo[s]?', 'factura[s]?', 'servicio[s]?', 'arriendo[s]?', 'deuda[s]?', 'cuota[s]?', 'prestamo[s]?'] },
+    { id: 'health', keywords: ['farmacia[s]?', 'drogueria[s]?', 'medico[s]?', 'medicina[s]?', 'pastilla[s]?', 'cita[s]?', 'dentista[s]?', 'hospital[es]?', 'remedio[s]?'] },
+    { id: 'clothing', keywords: ['ropa', 'zapato[s]?', 'camisa[s]?', 'pantalon[es]?', 'chaqueta[s]?', 'tenis', 'vestido[s]?', 'jean[s]?', 'camiseta[s]?'] },
+    { id: 'shopping', keywords: ['compra[s]?', 'mall', 'centro comercial', 'computador[es]?', 'celular[es]?', 'laptop[s]?', 'tecnologia', 'audifono[s]?', 'tablet[s]?', 'electronica', 'equipo[s]?'] }
   ];
 
   for (const rule of rules) {
@@ -283,9 +283,9 @@ export function parseFinancialVoiceCommand(rawText, options = {}) {
     };
   }
 
-  // 3. DETECCIÓN DE GASTOS Y ASIGNACIÓN INTELIGENTE DE CUENTA
-  const hasExplicitCash = /\b(en efectivo|con efectivo|en plata)\b/i.test(lower);
-  const hasExplicitBank = /\b(con tarjeta|por tarjeta|en tarjeta|de la cuenta|de mi cuenta|por transferencia|en el banco|del banco|por nequi|por daviplata|por bancolombia)\b/i.test(lower);
+  // 4. DETECCIÓN DE GASTOS Y ASIGNACIÓN INTELIGENTE DE CUENTA
+  const hasExplicitCash = /\b((?:en|con|de|del|desde)\s*(?:el\s*|mi\s*|la\s*)?(?:efectivo|plata|bolsillo|billetes|fisico)|a la mano|de contado)\b/i.test(lower);
+  const hasExplicitBank = /\b((?:con|por|en|de|del|a la|desde)\s*(?:la\s*|mi\s*|el\s*)?(?:tarjeta|nequi|daviplata|bancolombia|banco|cuenta|transferencia))\b/i.test(lower);
 
   let accountId = 'cash';
   let smartNotice = null;
@@ -301,6 +301,9 @@ export function parseFinancialVoiceCommand(rawText, options = {}) {
     }
   } else if (hasExplicitBank) {
     accountId = 'bank';
+    if (bankBalance !== null && bankBalance < totalAmount) {
+      smartNotice = `⚠️ Mencionaste Banco/Cuenta, pero tu saldo actual es de $${bankBalance.toLocaleString('es-CO')}.`;
+    }
   } else {
     // El usuario NO especificó cuenta -> LÓGICA DE SALDOS REALES
     if (balances !== null) {
