@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
 import BalanceCard from './components/BalanceCard';
 import TransactionForm from './components/TransactionForm';
 import GoalsSection from './components/GoalsSection';
-import AnalysisBreakdown from './components/AnalysisBreakdown';
 import DebtsTab from './components/DebtsTab';
 import SettingsTab from './components/SettingsTab';
 import SubscriptionsTab from './components/SubscriptionsTab';
@@ -14,13 +13,17 @@ import { exportToCSV, formatCurrency } from './utils/helpers';
 import { supabase } from './utils/supabaseClient';
 import Login from './components/Login';
 import PinLockScreen from './components/PinLockScreen';
-import LandingPage from './components/LandingPage';
 import BusinessGate from './components/BusinessGate';
-import BusinessDashboard from './components/BusinessDashboard';
+import VoiceQuickModal from './components/VoiceQuickModal';
 import { hasLocalPin } from './utils/crypto';
 import { useFinanceData } from './hooks/useFinanceData';
 import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
+
+// Code-splitting con lazy loading para optimización de bundle
+const AnalysisBreakdown = lazy(() => import('./components/AnalysisBreakdown'));
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const BusinessDashboard = lazy(() => import('./components/BusinessDashboard'));
 import { 
   Home, 
   PieChart, 
@@ -33,7 +36,8 @@ import {
   ReceiptText,
   Search,
   X,
-  Sparkles
+  Sparkles,
+  Mic
 } from 'lucide-react';
 
 const ACCOUNTS = [
@@ -54,6 +58,7 @@ function AppContent() {
   const [isGlobalSearch, setIsGlobalSearch] = useState(false);
   const [isBusinessUnlocked, setIsBusinessUnlocked] = useState(false);
   const [isLocked, setIsLocked] = useState(hasLocalPin());
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
   // Date Filter State
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
@@ -125,6 +130,19 @@ function AppContent() {
     await addTransaction(tx);
     setEditingTransaction(null);
     setActiveTab('home');
+  };
+
+  const handleApplyVoiceTransaction = (parsed) => {
+    if (!parsed) return;
+    startEditing({
+      amount: parsed.amount,
+      type: parsed.type,
+      description: parsed.description,
+      category: parsed.category,
+      accountId: parsed.accountId,
+      toAccountId: parsed.toAccountId,
+      date: new Date().toISOString()
+    });
   };
 
   const addBankTransaction = async (txData) => {
@@ -243,7 +261,18 @@ function AppContent() {
     );
   }
 
-  if (showLanding) return <LandingPage onInstallClick={() => {}} installPromptReady={!!deferredPrompt} onSkip={() => setShowLanding(false)} />;
+  if (showLanding) {
+    return (
+      <Suspense fallback={
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '14px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '3px solid rgba(196, 251, 109, 0.2)', borderTopColor: '#c4fb6d', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', fontWeight: '600' }}>Cargando presentación...</p>
+        </div>
+      }>
+        <LandingPage onInstallClick={() => {}} installPromptReady={!!deferredPrompt} onSkip={() => setShowLanding(false)} />
+      </Suspense>
+    );
+  }
   if (!session) return <Login />;
   if (isLocked) return <PinLockScreen onUnlock={() => setIsLocked(false)} onLogout={handleSignOut} />;
 
@@ -341,6 +370,22 @@ function AppContent() {
 
             <button 
               className="quick-action-btn"
+              onClick={() => setIsVoiceModalOpen(true)}
+              title="Dictar o Registrar con Voz e IA"
+            >
+              <div className="quick-action-icon" style={{ 
+                background: 'linear-gradient(135deg, rgba(196, 251, 109, 0.25), rgba(0, 122, 255, 0.25))', 
+                color: '#c4fb6d', 
+                border: '1px solid rgba(196, 251, 109, 0.4)',
+                boxShadow: '0 0 12px rgba(196, 251, 109, 0.2)'
+              }}>
+                <Mic size={20} strokeWidth={2.4} />
+              </div>
+              <span className="quick-action-label" style={{ color: '#c4fb6d', fontWeight: '800' }}>Voz IA</span>
+            </button>
+
+            <button 
+              className="quick-action-btn"
               onClick={() => {
                 setActiveTab('varios');
                 setVariosTab('minegocio');
@@ -410,14 +455,16 @@ function AppContent() {
         {activeTab === 'analysis' && (
           <div className="animate-fade">
             <WeeklySummary transactions={transactions} />
-            <AnalysisBreakdown 
-              transactions={transactions} 
-              filterMonth={filterMonth} 
-              filterYear={filterYear} 
-              dateFilterType={dateFilterType} 
-              startDate={startDate} 
-              endDate={endDate} 
-            />
+            <Suspense fallback={<div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.9rem' }}>Cargando análisis y gráficos...</div>}>
+              <AnalysisBreakdown 
+                transactions={transactions} 
+                filterMonth={filterMonth} 
+                filterYear={filterYear} 
+                dateFilterType={dateFilterType} 
+                startDate={startDate} 
+                endDate={endDate} 
+              />
+            </Suspense>
           </div>
         )}
 
@@ -513,17 +560,19 @@ function AppContent() {
 
                 {variosTab === 'minegocio' && (
                   isBusinessUnlocked ? (
-                    <BusinessDashboard 
-                      businesses={businesses} 
-                      addBusiness={addBusiness}
-                      deleteBusiness={deleteBusiness}
-                      updateBusiness={updateBusiness}
-                      setBusinesses={setBusinesses} 
-                      transactions={businessTransactions} 
-                      setTransactions={setBusinessTransactions} 
-                      workers={businessWorkers} 
-                      setWorkers={setBusinessWorkers} 
-                    />
+                    <Suspense fallback={<div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.9rem' }}>Cargando módulo de negocio...</div>}>
+                      <BusinessDashboard 
+                        businesses={businesses} 
+                        addBusiness={addBusiness}
+                        deleteBusiness={deleteBusiness}
+                        updateBusiness={updateBusiness}
+                        setBusinesses={setBusinesses} 
+                        transactions={businessTransactions} 
+                        setTransactions={setBusinessTransactions} 
+                        workers={businessWorkers} 
+                        setWorkers={setBusinessWorkers} 
+                      />
+                    </Suspense>
                   ) : (
                     <BusinessGate onAccessGranted={() => setIsBusinessUnlocked(true)} />
                   )
@@ -535,6 +584,13 @@ function AppContent() {
           </div>
         )}
       </main>
+
+      {/* Modal Asistente de Voz / IA */}
+      <VoiceQuickModal 
+        isOpen={isVoiceModalOpen} 
+        onClose={() => setIsVoiceModalOpen(false)} 
+        onApplyTransaction={handleApplyVoiceTransaction} 
+      />
 
       {/* Modal de Transacción (Nuevo / Editar) */}
       {(activeTab === 'add_modal' || editingTransaction) && (

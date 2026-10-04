@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../data/categories';
 import { formatCurrency, formatInputAmount, parseInputAmount } from '../utils/helpers';
-import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Calendar, Landmark, Wallet, Check, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Calendar, Landmark, Wallet, Check, X, Sparkles, Mic } from 'lucide-react';
+import VoiceQuickModal from './VoiceQuickModal';
 
 const INCOME_CATEGORIES  = CATEGORIES.filter(c => ['salary','freelance','other_income','savings'].includes(c.id));
 const EXPENSE_CATEGORIES = CATEGORIES.filter(c => !['salary','freelance','other_income'].includes(c.id));
@@ -63,6 +64,17 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
   const [toAccountId, setToAccountId] = useState('bank');
   const [toBankId,    setToBankId]    = useState('general');
   const [date,        setDate]        = useState(() => getLocalDatetimeString());
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+
+  const handleApplyVoiceTransaction = (parsed) => {
+    if (!parsed) return;
+    if (parsed.type) setType(parsed.type);
+    if (parsed.amount) setAmount(parsed.amount.toString());
+    if (parsed.description) setDescription(parsed.description);
+    if (parsed.category) setCategory(parsed.category);
+    if (parsed.accountId) setAccountId(parsed.accountId);
+    if (parsed.toAccountId) setToAccountId(parsed.toAccountId);
+  };
 
   const resetForm = () => {
     setDescription('');
@@ -140,6 +152,40 @@ const TransactionForm = ({ onAddTransaction, editingData = null, onCancelEdit = 
 
   return (
     <form onSubmit={handleSubmit} className="transaction-form animate-fade" style={{ paddingTop: '16px' }}>
+      {/* Botón Asistente Inteligente de Voz / IA */}
+      <button
+        type="button"
+        onClick={() => setIsVoiceModalOpen(true)}
+        style={{
+          width: '100%',
+          padding: '10px 14px',
+          marginBottom: '14px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, rgba(196, 251, 109, 0.12), rgba(0, 122, 255, 0.12))',
+          border: '1px solid rgba(196, 251, 109, 0.35)',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          fontSize: '0.85rem',
+          fontWeight: '700',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)'
+        }}
+      >
+        <Sparkles size={16} color="#c4fb6d" />
+        <span>Dictar o Escribir con IA</span>
+        <span style={{ fontSize: '0.68rem', background: '#c4fb6d', color: '#090c15', padding: '2px 7px', borderRadius: '10px', fontWeight: '900' }}>VOZ</span>
+      </button>
+
+      <VoiceQuickModal 
+        isOpen={isVoiceModalOpen} 
+        onClose={() => setIsVoiceModalOpen(false)} 
+        onApplyTransaction={handleApplyVoiceTransaction} 
+      />
+
       {/* Selector de Tipo (Gasto | Ingreso | Traspaso) Segmented Pills */}
       <div style={{
         display: 'flex', gap: '6px',
