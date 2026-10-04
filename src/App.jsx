@@ -118,6 +118,25 @@ function AppContent() {
     };
   }, []);
 
+  // Handle Android / PWA App Shortcuts (e.g. /?action=voice, /?action=expense)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      if (action === 'voice') {
+        setShowLanding(false);
+        setIsVoiceModalOpen(true);
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (action === 'expense') {
+        setShowLanding(false);
+        startEditing({ type: 'expense' });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch (e) {
+      console.error('Error handling shortcut action:', e);
+    }
+  }, []);
+
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) console.error('Error signing out:', error.message);
@@ -590,6 +609,7 @@ function AppContent() {
         isOpen={isVoiceModalOpen} 
         onClose={() => setIsVoiceModalOpen(false)} 
         onApplyTransaction={handleApplyVoiceTransaction} 
+        autoStart={true}
       />
 
       {/* Modal de Transacción (Nuevo / Editar) */}

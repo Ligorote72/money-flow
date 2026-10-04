@@ -3,7 +3,7 @@ import { Mic, MicOff, Sparkles, X, ArrowRight, Check, AlertCircle, ArrowLeftRigh
 import { parseFinancialVoiceCommand } from '../utils/aiVoiceParser.js';
 import { formatCurrency } from '../utils/helpers';
 
-export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction }) {
+export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction, autoStart = false }) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [parsedResult, setParsedResult] = useState(null);
@@ -51,6 +51,24 @@ export default function VoiceQuickModal({ isOpen, onClose, onApplyTransaction })
       recognitionRef.current = recognition;
     }
   }, []);
+
+  // Auto-start listening if autoStart is true when modal opens
+  useEffect(() => {
+    if (isOpen && autoStart && recognitionRef.current && !isListening) {
+      const timer = setTimeout(() => {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          console.log('Voice autoStart deferred to user click:', e);
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    } else if (!isOpen && isListening && recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+  }, [isOpen, autoStart]);
 
   // Update parsed result when user types manually
   const handleTextChange = (e) => {

@@ -32,6 +32,22 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'any maskable'
           }
+        ],
+        shortcuts: [
+          {
+            name: 'Dictar con IA',
+            short_name: 'Voz IA',
+            description: 'Registra un movimiento por voz con IA',
+            url: '/?action=voice',
+            icons: [{ src: 'icon-512.png', sizes: '512x512', type: 'image/png' }]
+          },
+          {
+            name: 'Nuevo Gasto',
+            short_name: 'Gasto',
+            description: 'Registrar un gasto rápidamente',
+            url: '/?action=expense',
+            icons: [{ src: 'icon-512.png', sizes: '512x512', type: 'image/png' }]
+          }
         ]
       }
     })
