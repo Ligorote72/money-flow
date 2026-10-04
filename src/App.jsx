@@ -318,6 +318,25 @@ function AppContent() {
     );
   }
 
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          setShowLanding(false);
+          setDeferredPrompt(null);
+          localStorage.setItem('money-flow-skip-landing', 'true');
+        }
+      } catch (err) {
+        console.error('Error triggering deferred prompt:', err);
+      }
+    } else {
+      setShowLanding(false);
+      localStorage.setItem('money-flow-skip-landing', 'true');
+    }
+  };
+
   if (showLanding) {
     return (
       <Suspense fallback={
@@ -326,7 +345,14 @@ function AppContent() {
           <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', fontWeight: '600' }}>Cargando presentación...</p>
         </div>
       }>
-        <LandingPage onInstallClick={() => {}} installPromptReady={!!deferredPrompt} onSkip={() => setShowLanding(false)} />
+        <LandingPage 
+          onInstallClick={handleInstallClick} 
+          installPromptReady={!!deferredPrompt} 
+          onSkip={() => {
+            setShowLanding(false);
+            localStorage.setItem('money-flow-skip-landing', 'true');
+          }} 
+        />
       </Suspense>
     );
   }

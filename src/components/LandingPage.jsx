@@ -20,6 +20,7 @@ import confetti from 'canvas-confetti';
 
 const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [activeTab, setActiveTab] = useState('android');
   const [downloadStep, setDownloadStep] = useState('ready'); // ready, downloading, completed
 
@@ -29,19 +30,19 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
       confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
     } catch (e) {}
 
-    // Simulated download / redirect to GitHub APK release
     setTimeout(() => {
       setDownloadStep('completed');
-      // Create a direct anchor to the latest release or artifact on GitHub
-      const link = document.createElement('a');
-      link.href = 'https://github.com/Ligorote72/money-flow/actions';
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      // If user also wants PWA install prompt
-      if (installPromptReady) {
-        onInstallClick();
-      }
-    }, 1500);
+      window.open('https://github.com/Ligorote72/money-flow/actions', '_blank');
+    }, 800);
+  };
+
+  const handlePWAInstall = () => {
+    if (installPromptReady && onInstallClick) {
+      onInstallClick();
+      setShowDownloadModal(false);
+    } else {
+      setShowInstallGuide(true);
+    }
   };
 
   return (
@@ -124,24 +125,24 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
-            onClick={onSkip}
+            onClick={() => setShowDownloadModal(true)}
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '12px',
-              padding: '8px 14px',
+              padding: '8px 12px',
               color: '#f0f6fc',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               fontWeight: '600',
               cursor: 'pointer'
             }}
           >
-            Abrir Web App
+            Descargas / APK
           </button>
           <button
-            onClick={() => setShowDownloadModal(true)}
+            onClick={onSkip}
             style={{
               background: 'linear-gradient(135deg, #c4fb6d 0%, #34c759 100%)',
               border: 'none',
@@ -157,8 +158,8 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
               boxShadow: '0 4px 16px rgba(196, 251, 109, 0.3)'
             }}
           >
-            <Download size={15} />
-            Descargar
+            Entrar a la App
+            <ArrowRight size={15} />
           </button>
         </div>
       </header>
@@ -224,12 +225,12 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
           marginBottom: '48px'
         }}>
           <button
-            onClick={() => setShowDownloadModal(true)}
+            onClick={installPromptReady ? onInstallClick : onSkip}
             style={{
               background: 'linear-gradient(135deg, #c4fb6d 0%, #34c759 100%)',
               border: 'none',
               borderRadius: '16px',
-              padding: '16px 28px',
+              padding: '16px 32px',
               color: '#090d16',
               fontSize: '1.05rem',
               fontWeight: '800',
@@ -241,13 +242,13 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
               transition: 'transform 0.2s'
             }}
           >
-            <Download size={20} />
-            Descargar APK para Android
-            <span style={{ fontSize: '0.75rem', background: 'rgba(0,0,0,0.15)', padding: '2px 8px', borderRadius: '10px' }}>v2.5</span>
+            <Zap size={20} />
+            {installPromptReady ? 'Instalar en tu Celular' : 'Entrar a MoneyFlow'}
+            <ArrowRight size={18} />
           </button>
 
           <button
-            onClick={onSkip}
+            onClick={() => setShowDownloadModal(true)}
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -262,9 +263,8 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
               cursor: 'pointer'
             }}
           >
-            <Smartphone size={18} />
-            Usar Web App en Navegador
-            <ArrowRight size={16} />
+            <Download size={18} />
+            Opciones de Instalación / APK
           </button>
         </div>
 
@@ -562,13 +562,13 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-              {/* Opción 1: APK Directo */}
+              {/* Opción 1: PWA Instantánea (Recomendada) */}
               <div 
-                onClick={handleDownloadAPK}
+                onClick={handlePWAInstall}
                 style={{
                   padding: '16px',
-                  background: 'rgba(196,251,109,0.06)',
-                  border: '1px solid rgba(196,251,109,0.3)',
+                  background: 'rgba(196,251,109,0.08)',
+                  border: '1px solid rgba(196,251,109,0.35)',
                   borderRadius: '16px',
                   cursor: 'pointer',
                   display: 'flex',
@@ -577,28 +577,61 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
                   transition: 'background 0.2s'
                 }}
               >
-                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #c4fb6d, #34c759)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
-                  <Download size={22} />
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #c4fb6d, #34c759)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#090d16' }}>
+                  <Zap size={22} strokeWidth={2.5} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontWeight: '700', fontSize: '0.95rem', color: '#fff' }}>Archivo APK Android</p>
-                    <span style={{ fontSize: '0.7rem', color: '#c4fb6d', fontWeight: '700' }}>~4.8 MB</span>
+                    <p style={{ fontWeight: '800', fontSize: '0.95rem', color: '#fff', margin: 0 }}>Instalar en el Celular (PWA)</p>
+                    <span style={{ fontSize: '0.7rem', color: '#c4fb6d', fontWeight: '800', background: 'rgba(196,251,109,0.15)', padding: '2px 8px', borderRadius: '10px' }}>Recomendado</span>
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: '#8b949e', marginTop: '2px' }}>Instalación directa para celulares Android con GitHub Actions</p>
+                  <p style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '3px', margin: 0 }}>Sin descargar archivos pesados. Se instala directo en tu pantalla de inicio.</p>
                 </div>
               </div>
 
-              {/* Opción 2: PWA Instantánea */}
+              {/* Guía visual si el navegador no auto-dispara el diálogo */}
+              {showInstallGuide && (
+                <div style={{
+                  background: 'rgba(20, 26, 40, 0.95)',
+                  border: '1px solid rgba(196, 251, 109, 0.4)',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  textAlign: 'left',
+                  animation: 'fadeIn 0.2s ease-out'
+                }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#c4fb6d', fontSize: '0.9rem', fontWeight: 800 }}>
+                    📲 Pasos para instalar en Chrome / Android:
+                  </h4>
+                  <ol style={{ margin: '0 0 12px 0', paddingLeft: '18px', fontSize: '0.8rem', color: '#e2e8f0', lineHeight: 1.6 }}>
+                    <li>Toca el menú de <strong>3 puntos (⋮)</strong> arriba a la derecha en Chrome.</li>
+                    <li>Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>.</li>
+                    <li>¡Listo! Tu ícono con acceso de voz quedará en tu pantalla.</li>
+                  </ol>
+                  <button
+                    onClick={() => {
+                      setShowDownloadModal(false);
+                      onSkip();
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: 'linear-gradient(135deg, #c4fb6d, #34c759)',
+                      color: '#090d16',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontWeight: 800,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Entrar a la Aplicación Ahora
+                  </button>
+                </div>
+              )}
+
+              {/* Opción 2: APK Directo */}
               <div 
-                onClick={() => {
-                  setShowDownloadModal(false);
-                  if (installPromptReady) {
-                    onInstallClick();
-                  } else {
-                    onSkip();
-                  }
-                }}
+                onClick={handleDownloadAPK}
                 style={{
                   padding: '16px',
                   background: 'rgba(255,255,255,0.03)',
@@ -607,31 +640,32 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '14px'
+                  gap: '14px',
+                  transition: 'background 0.2s'
                 }}
               >
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                  <Zap size={22} color="#c4fb6d" />
+                  <Download size={22} color="#60a5fa" />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontWeight: '700', fontSize: '0.95rem', color: '#fff' }}>App Web Instantánea (PWA)</p>
-                    <span style={{ fontSize: '0.7rem', color: '#34c759', fontWeight: '700' }}>0 MB</span>
+                    <p style={{ fontWeight: '700', fontSize: '0.95rem', color: '#fff', margin: 0 }}>Compilar / Descargar APK</p>
+                    <span style={{ fontSize: '0.7rem', color: '#60a5fa', fontWeight: '700' }}>GitHub</span>
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: '#8b949e', marginTop: '2px' }}>Instalar al instante en Android o iPhone sin descargar archivos</p>
+                  <p style={{ fontSize: '0.75rem', color: '#8b949e', marginTop: '3px', margin: 0 }}>Abre GitHub Actions para descargar el artefacto APK compilado</p>
                 </div>
               </div>
             </div>
 
             {downloadStep === 'downloading' && (
               <div style={{ textAlign: 'center', padding: '10px 0', color: '#c4fb6d', fontSize: '0.85rem', fontWeight: '600' }}>
-                ⏳ Preparando enlace de descarga y compilación...
+                ⏳ Abriendo descargas de artefactos APK en GitHub...
               </div>
             )}
 
             {downloadStep === 'completed' && (
               <div style={{ textAlign: 'center', padding: '10px 0', color: '#34c759', fontSize: '0.85rem', fontWeight: '700' }}>
-                🎉 ¡Redirigiendo a las descargas de GitHub / Instalador!
+                🎉 ¡Página de GitHub abierta con las compilaciones APK!
               </div>
             )}
 
@@ -643,17 +677,22 @@ const LandingPage = ({ onInstallClick, installPromptReady, onSkip }) => {
               style={{
                 width: '100%',
                 padding: '14px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '14px',
-                color: '#8b949e',
-                fontSize: '0.85rem',
-                fontWeight: '600',
+                color: '#fff',
+                fontSize: '0.88rem',
+                fontWeight: '700',
                 cursor: 'pointer',
-                marginTop: '10px'
+                marginTop: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
               }}
             >
-              Continuar al Navegador sin descargar
+              Entrar directamente a MoneyFlow
+              <ArrowRight size={16} />
             </button>
           </div>
         </div>
