@@ -20,14 +20,20 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { parseFinancialVoiceCommand } from '../utils/aiVoiceParser';
+import { findKnowledgeAnswer } from '../utils/assistantKnowledge';
 
 const SUGGESTIONS = [
   '🎙️ "Gasté 25 mil en almuerzo en efectivo"',
   '💰 "¿Cuál es mi saldo actual?"',
-  '📈 "Resumen de gastos de este mes"',
-  '☕ "Me entraron 500 mil de cosecha"',
-  '💳 "¿Cuánto tengo en bancos y efectivo?"',
-  '⛽ "Pagué 40.000 de gasolina con Nequi"'
+  '☕ "¿Cómo funciona el módulo de Finca?"',
+  '📲 "¿Cómo dejo este Chat en mi pantalla de inicio?"',
+  '🤝 "¿Cómo gestiono las deudas y préstamos?"',
+  '🎙️ "¿Cómo habilito el permiso de micrófono?"',
+  '🐷 "¿Cómo funcionan los cochinitos de ahorro?"',
+  '🔒 "¿Cómo activo el PIN de seguridad?"',
+  '💳 "¿Cómo registro gastos fijos o suscripciones?"',
+  '📊 "¿Cómo exporto mis datos a Excel?"',
+  '📈 "Resumen de gastos de este mes"'
 ];
 
 const AssistantChat = ({ 
@@ -50,7 +56,7 @@ const AssistantChat = ({
       {
         id: 'welcome-1',
         sender: 'bot',
-        text: '👋 ¡Hola Diego! Soy tu Asistente Financiero con Inteligencia Artificial de MoneyFlow.\n\nPuedes dictarme con el botón de micrófono o escribirme libremente tus gastos, ingresos, pagos divididos, o preguntarme por tus saldos y resúmenes.',
+        text: '👋 ¡Hola Diego! Soy tu Asistente Financiero con Inteligencia Artificial de MoneyFlow.\n\nPuedes dictarme tus gastos e ingresos (¡incluso pagos divididos!), consultar tus saldos o hacerme CUALQUIER pregunta sobre la aplicación (módulo de Finca Cafetera, deudas, cochinitos, presupuestos, permisos o cómo anclar este chat a tu celular).',
         type: 'text',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
@@ -241,30 +247,27 @@ const AssistantChat = ({
       return;
     }
 
-    // 3. Comando Ayuda
-    if (lower === 'ayuda' || lower === 'help' || lower === 'que puedes hacer') {
+    // 3. Consulta Especializada en la Base de Conocimiento de MoneyFlow (Cualquier pregunta de la App)
+    const knowledgeAnswer = findKnowledgeAnswer(cleanText);
+    if (knowledgeAnswer) {
       setTimeout(() => {
         setMessages(prev => [
           ...prev,
           {
             id: 'bot-' + Date.now(),
             sender: 'bot',
-            type: 'text',
-            text: '💡 **¿Qué puedes pedirme?**\n\n' +
-                  '• **Registrar Gastos:** *"Gasté 18 mil en taxi pagando en efectivo"*\n' +
-                  '• **Registrar Ingresos:** *"Me entraron 600 mil de la cosecha"*\n' +
-                  '• **Pagos con Nequi o Bancolombia:** *"Pagué 40 mil con Nequi"*\n' +
-                  '• **Pagos Divididos:** *"Compré 50 mil de mercado, mitad efectivo mitad banco"*\n' +
-                  '• **Consultas:** *"¿Cuál es mi saldo?"*, *"Resumen del mes"*\n' +
-                  '• **Deshacer:** Puedes borrar o corregir cualquier movimiento con 1 clic en su tarjeta.',
+            type: 'knowledge_card',
+            title: knowledgeAnswer.title,
+            answer: knowledgeAnswer.answer,
+            topicId: knowledgeAnswer.topicId,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ]);
-      }, 350);
+      }, 250);
       return;
     }
 
-    // 4. Procesamiento Financiero Inteligente con IA
+    // 4. Procesamiento Financiero Inteligente con IA (Gastos, Ingresos, Traspasos, Pagos Divididos)
     const parsed = parseFinancialVoiceCommand(cleanText, { accountBalances });
 
     if (parsed && parsed.amount > 0) {
@@ -350,12 +353,16 @@ const AssistantChat = ({
           {
             id: 'bot-' + Date.now(),
             sender: 'bot',
-            type: 'text',
-            text: `🤔 No logré identificar un monto o movimiento específico en: _"${cleanText}"_.\n\nPrueba por ejemplo diciendo:\n*"Gasté 20 mil en almuerzo"* o *"Me entraron 300 mil"*.`,
+            type: 'knowledge_card',
+            title: '🤖 Asistente Inteligente MoneyFlow',
+            answer: `He analizado tu mensaje: _"${cleanText}"_.\n\n` +
+                    `• **Para registrar un movimiento:** Recuerda decir el monto (ejemplo: *"Gasté 20 mil en almuerzo"* o *"Me entraron 500 mil de cosecha"*).\n` +
+                    `• **Para resolver dudas:** Puedes preguntarme sobre la Finca Cafetera, deudas, cochinitos de ahorro, presupuestos, permisos de micrófono, PIN o cómo anclar este chat en tu pantalla.`,
+            topicId: 'general_help',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ]);
-      }, 350);
+      }, 300);
     }
   };
 
@@ -461,9 +468,8 @@ const AssistantChat = ({
             onClick={() => {
               if (installPromptReady && onInstallClick) {
                 onInstallClick();
-              } else {
-                setShowInstallGuide(true);
               }
+              setShowInstallGuide(true);
             }}
             style={{
               padding: '6px 12px',
@@ -471,22 +477,89 @@ const AssistantChat = ({
               background: 'rgba(196, 251, 109, 0.12)',
               border: '1px solid rgba(196, 251, 109, 0.35)',
               color: '#c4fb6d',
-              fontSize: '0.78rem',
+              fontSize: '0.76rem',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               cursor: 'pointer'
             }}
-            title="Añadir a pantalla de inicio"
+            title="Dejar Chat en la Pantalla de Inicio"
           >
             <Smartphone size={14} />
-            <span>Atajo Celular</span>
+            <span>📲 Dejar en Pantalla</span>
           </button>
         </div>
       </header>
 
-      {/* Modal Guía para agregar a pantalla de inicio */}
+      {/* Banner Destacado: Dejar directamente el chat en la pantalla de inicio */}
+      <div style={{
+        margin: '10px 14px 4px 14px',
+        padding: '10px 14px',
+        borderRadius: '16px',
+        background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.18), rgba(196, 251, 109, 0.1))',
+        border: '1px solid rgba(52, 199, 89, 0.35)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '10px',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+        zIndex: 15,
+        flexShrink: 0
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          <div style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '12px',
+            background: 'rgba(52, 199, 89, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#c4fb6d',
+            flexShrink: 0
+          }}>
+            <Smartphone size={20} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#c4fb6d', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              ¿Abrir Chat en 1 toque desde tu celular?
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+              Fíjalo como acceso directo en tu pantalla de inicio
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            if (installPromptReady && onInstallClick) {
+              onInstallClick();
+            }
+            setShowInstallGuide(true);
+          }}
+          style={{
+            padding: '8px 12px',
+            borderRadius: '12px',
+            background: '#34c759',
+            color: '#090d16',
+            border: 'none',
+            fontWeight: 800,
+            fontSize: '0.76rem',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 2px 10px rgba(52,199,89,0.3)',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <Smartphone size={14} />
+          Dejar en Pantalla
+        </button>
+      </div>
+
+      {/* Modal Guía Completa para agregar a pantalla de inicio */}
       {showInstallGuide && (
         <div style={{
           position: 'absolute',
@@ -494,58 +567,122 @@ const AssistantChat = ({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.75)',
+          background: 'rgba(0,0,0,0.8)',
           backdropFilter: 'blur(8px)',
           zIndex: 50,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '20px'
+          padding: '16px'
         }}>
           <div style={{
             background: '#131b2e',
-            border: '1px solid rgba(196, 251, 109, 0.3)',
-            borderRadius: '20px',
+            border: '1px solid rgba(196, 251, 109, 0.35)',
+            borderRadius: '22px',
             padding: '24px',
-            maxWidth: '360px',
+            maxWidth: '390px',
             width: '100%',
-            textAlign: 'center'
+            textAlign: 'center',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.7)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
           }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📲</div>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '1.2rem', color: '#c4fb6d' }}>
-              Dejar el Chat en tu Pantalla
+            <h3 style={{ margin: '0 0 6px 0', fontSize: '1.25rem', color: '#c4fb6d', fontWeight: 900 }}>
+              Dejar Chat en Pantalla de Inicio
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              Para abrir este Asistente directamente desde la pantalla de inicio de tu celular sin buscar nada:
+            <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+              Abre directamente este Asistente con 1 solo toque desde tu celular sin abrir menús:
             </p>
+
+            {/* Opción 1: Botón nativo si está disponible */}
+            {installPromptReady && (
+              <button
+                onClick={() => {
+                  if (onInstallClick) onInstallClick();
+                  setShowInstallGuide(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #34c759, #c4fb6d)',
+                  color: '#090d16',
+                  fontWeight: 900,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginBottom: '16px',
+                  boxShadow: '0 4px 15px rgba(52,199,89,0.3)'
+                }}
+              >
+                <Smartphone size={18} />
+                Instalar Ahora Automáticamente
+              </button>
+            )}
+
+            {/* Pasos para Android */}
             <div style={{
               background: 'rgba(255,255,255,0.04)',
-              borderRadius: '12px',
-              padding: '12px',
+              borderRadius: '14px',
+              padding: '12px 14px',
               textAlign: 'left',
               fontSize: '0.82rem',
               color: '#cbd5e1',
               lineHeight: 1.6,
-              marginBottom: '18px'
+              marginBottom: '12px',
+              border: '1px solid rgba(255,255,255,0.06)'
             }}>
-              1. Toca el menú de <b>3 puntos (⋮)</b> de Chrome.<br/>
+              <strong style={{ color: '#34c759', display: 'block', marginBottom: '4px' }}>
+                🤖 En Android (Google Chrome):
+              </strong>
+              1. Toca los <b>3 puntos (⋮)</b> arriba a la derecha en Chrome.<br/>
               2. Toca <b>"Agregar a la pantalla principal"</b> o <b>"Instalar aplicación"</b>.<br/>
-              3. ¡Listo! Te quedará un ícono directo llamado <b>MoneyFlow</b> para hablarle cuando quieras.
+              3. ¡Listo! Te quedará un ícono directo en tu pantalla.<br/>
+              <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                💡 Tip: Mantén presionado el ícono en tu pantalla para abrir directo el <b>"Chat Asistente IA"</b>.
+              </span>
             </div>
+
+            {/* Pasos para iPhone */}
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              borderRadius: '14px',
+              padding: '12px 14px',
+              textAlign: 'left',
+              fontSize: '0.82rem',
+              color: '#cbd5e1',
+              lineHeight: 1.6,
+              marginBottom: '16px',
+              border: '1px solid rgba(255,255,255,0.06)'
+            }}>
+              <strong style={{ color: '#60a5fa', display: 'block', marginBottom: '4px' }}>
+                🍏 En iPhone (Safari):
+              </strong>
+              1. Toca el botón <b>Compartir</b> (el cuadrado con flecha hacia arriba ⎋ abajo).<br/>
+              2. Baja y selecciona <b>"Agregar al inicio"</b> (+).<br/>
+              3. Toca <b>"Agregar"</b> arriba a la derecha.
+            </div>
+
             <button
               onClick={() => setShowInstallGuide(false)}
               style={{
                 width: '100%',
-                padding: '12px',
+                padding: '11px',
                 borderRadius: '12px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #c4fb6d, #34c759)',
-                color: '#090d16',
-                fontWeight: 800,
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.08)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '0.86rem',
                 cursor: 'pointer'
               }}
             >
-              ¡Entendido!
+              ¡Cerrar Guía!
             </button>
           </div>
         </div>
@@ -805,6 +942,69 @@ const AssistantChat = ({
                           </div>
                         ))}
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 5. Tarjeta de Respuesta Especializada / Base de Conocimiento */}
+                {msg.type === 'knowledge_card' && (
+                  <div style={{
+                    background: 'linear-gradient(145deg, #131b2e, #0e1626)',
+                    border: '1px solid rgba(196, 251, 109, 0.3)',
+                    borderRadius: '18px',
+                    padding: '16px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    color: '#e2e8f0',
+                    lineHeight: 1.55
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '10px',
+                      paddingBottom: '8px',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)'
+                    }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#c4fb6d', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Sparkles size={16} />
+                        {msg.title || 'Respuesta Especializada'}
+                      </span>
+                      <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{msg.timestamp}</span>
+                    </div>
+
+                    <div style={{ fontSize: '0.86rem', whiteSpace: 'pre-wrap', color: '#cbd5e1' }}>
+                      {msg.answer}
+                    </div>
+
+                    {/* Botón rápido interactivo para atajo en pantalla de inicio */}
+                    {(msg.topicId === 'install_shortcut' || (msg.answer && msg.answer.includes('Pantalla de Inicio'))) && (
+                      <button
+                        onClick={() => {
+                          if (installPromptReady && onInstallClick) {
+                            onInstallClick();
+                          }
+                          setShowInstallGuide(true);
+                        }}
+                        style={{
+                          marginTop: '12px',
+                          width: '100%',
+                          padding: '10px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #c4fb6d, #34c759)',
+                          color: '#090d16',
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Smartphone size={16} />
+                        📲 Dejar Chat en Pantalla de Inicio
+                      </button>
                     )}
                   </div>
                 )}
