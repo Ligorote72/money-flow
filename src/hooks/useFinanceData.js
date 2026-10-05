@@ -185,11 +185,27 @@ export function useFinanceData() {
     });
   };
 
-  const deleteTransaction = async (id) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este movimiento?')) {
+  const updateTransaction = async (id, updates) => {
+    let updatedTx = null;
+    setTransactions(prev => prev.map(t => {
+      if (t.id === id) {
+        updatedTx = { ...t, ...updates };
+        return updatedTx;
+      }
+      return t;
+    }));
+
+    if (session && updatedTx) {
+      await syncTransaction(updatedTx, session.user.id);
+    }
+    return updatedTx;
+  };
+
+  const deleteTransaction = async (id, force = false) => {
+    if (force || window.confirm('¿Estás seguro de que quieres eliminar este movimiento?')) {
       setTransactions(prev => prev.filter(t => t.id !== id));
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      if (isUUID) await deleteFromSupabase('transactions', id);
+      if (isUUID && session) await deleteFromSupabase('transactions', id);
     }
   };
 
@@ -493,6 +509,7 @@ export function useFinanceData() {
     loading, setLoading,
     alerts, setAlerts,
     addTransaction,
+    updateTransaction,
     deleteTransaction,
     addBank,
     deleteBank,

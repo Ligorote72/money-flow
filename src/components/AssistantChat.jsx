@@ -21,9 +21,11 @@ import {
 import confetti from 'canvas-confetti';
 import { parseFinancialVoiceCommand } from '../utils/aiVoiceParser';
 import { findKnowledgeAnswer } from '../utils/assistantKnowledge';
+import { handleAssistantActionRequest } from '../utils/assistantActionHandler';
 
 const SUGGESTIONS = [
   '🎙️ "Gasté 25 mil en almuerzo en efectivo"',
+  '🔄 "Pasa el gasto de 500 al banco"',
   '💰 "¿Cuál es mi saldo actual?"',
   '☕ "¿Cómo funciona el módulo de Finca?"',
   '📲 "¿Cómo dejo este Chat en mi pantalla de inicio?"',
@@ -39,6 +41,7 @@ const SUGGESTIONS = [
 const AssistantChat = ({ 
   transactions = [], 
   onAddTransaction, 
+  onUpdateTransaction,
   onDeleteTransaction, 
   onEditTransaction,
   accountBalances = { cash: 0, bank: 0 },
@@ -204,8 +207,101 @@ const AssistantChat = ({
 
     const lower = cleanText.toLowerCase();
 
-    // 1. Comando Saldo / Balance
-    if (lower.includes('saldo') || lower.includes('balance') || lower.includes('cuanto tengo') || lower.includes('cuánto tengo')) {
+    // 0. SOLICITUDES Y ACCIONES OPERATIVAS (Reasignar cuentas, corregir movimientos, traspasos, nivelar saldo)
+    const actionResult = handleAssistantActionRequest(cleanText, { transactions, accountBalances, banks });
+    if (actionResult) {
+      if (actionResult.action === 'reassign_account') {
+        const { targetTx, newAccountId, oldAccountId, amount, description } = actionResult;
+        if (onUpdateTransaction) {
+          await onUpdateTransaction(targetTx.id, { accountId: newAccountId });
+        }
+        setTimeout(() => {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              sender: 'bot',
+              type: 'action_success_card',
+              title: '✅ Movimiento Reasignado con Éxito',
+              message: `El gasto de **$${amount.toLocaleString('es-CO')}** (_${description}_) se reasignó para descontarse de **${newAccountId === 'bank' ? '🏛️ Bancos / Cuentas' : '💵 Efectivo'}** en lugar de ${oldAccountId === 'bank' ? 'Bancos' : 'Efectivo'}.\n\nTus saldos han sido actualizados correctamente.`,
+              undoAction: async () => {
+                if (onUpdateTransaction) await onUpdateTransaction(targetTx.id, { accountId: oldAccountId });
+              },
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+        }, 300);
+        return;
+      }
+
+      if (actionResult.action === 'transfer_balance') {
+        const { fromAccount, toAccount, amount, reason } = actionResult;
+        const transferTx = {
+          id: Date.now().toString(),
+          description: reason || `Traspaso: ${fromAccount === 'bank' ? 'Banco' : 'Efectivo'} a ${toAccount === 'bank' ? 'Banco' : 'Efectivo'}`,
+          amount,
+          type: 'transfer',
+          category: 'transfer',
+          accountId: fromAccount,
+          toAccountId: toAccount,
+          date: new Date().toISOString()
+        };
+        await onAddTransaction(transferTx);
+        setTimeout(() => {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              sender: 'bot',
+              type: 'action_success_card',
+              title: '✅ Traspaso Realizado con Éxito',
+              message: `Se transfirieron **$${amount.toLocaleString('es-CO')}** desde **${fromAccount === 'bank' ? '🏛️ Bancos' : '💵 Efectivo'}** hacia **${toAccount === 'bank' ? '🏛️ Bancos' : '💵 Efectivo'}**.\n\n${reason ? `📌 _${reason}_\n\n` : ''}Tus saldos han sido nivelados correctamente.`,
+              undoAction: async () => {
+                if (onDeleteTransaction) await onDeleteTransaction(transferTx.id, true);
+              },
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+        }, 300);
+        return;
+      }
+
+      if (actionResult.action === 'delete_transaction') {
+        const { targetTx, amount, description } = actionResult;
+        if (onDeleteTransaction) {
+          await onDeleteTransaction(targetTx.id, true);
+        }
+        setTimeout(() => {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              sender: 'bot',
+              type: 'action_success_card',
+              title: '🗑️ Movimiento Eliminado',
+              message: `Se eliminó el registro de **$${amount.toLocaleString('es-CO')}** (_${description}_).\n\nTus saldos han sido restaurados.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+        }, 300);
+        return;
+      }
+    }
+
+    // 1. Comando Consulta de Saldo / Balance (Solo si es pregunta directa, no una acción)
+    const isActionVerb = /\b(pasa|pasar|mueve|mover|cambia|cambiar|transfiere|transferir|reasigna|reasignar|elimina|borra|nivela|ajusta)\b/i.test(lower);
+    const isBalanceInquiry = !isActionVerb && (
+      lower.includes('cuanto tengo') || 
+      lower.includes('cuánto tengo') || 
+      lower.includes('cual es mi saldo') || 
+      lower.includes('cuál es mi saldo') || 
+      lower === 'saldo' || 
+      lower === 'mi saldo' || 
+      lower === 'balance' ||
+      /^ver (?:mi )?saldo/i.test(lower)
+    );
+
+    if (isBalanceInquiry) {
       const summary = calculateMonthlySummary();
       setTimeout(() => {
         setMessages(prev => [
@@ -1004,6 +1100,72 @@ const AssistantChat = ({
                       >
                         <Smartphone size={16} />
                         📲 Dejar Chat en Pantalla de Inicio
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 6. Tarjeta de Éxito en Solicitud / Acción Operativa */}
+                {msg.type === 'action_success_card' && (
+                  <div style={{
+                    background: 'linear-gradient(145deg, #131b2e, #0e1f36)',
+                    border: '1px solid rgba(52, 199, 89, 0.45)',
+                    borderRadius: '18px',
+                    padding: '16px',
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.4)',
+                    color: '#e2e8f0',
+                    lineHeight: 1.55
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '10px',
+                      paddingBottom: '8px',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)'
+                    }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#34c759', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle size={16} />
+                        {msg.title}
+                      </span>
+                      <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{msg.timestamp}</span>
+                    </div>
+
+                    <div style={{ fontSize: '0.88rem', whiteSpace: 'pre-wrap', color: '#cbd5e1', marginBottom: msg.undoAction ? '12px' : '0' }}>
+                      {msg.message}
+                    </div>
+
+                    {msg.undoAction && (
+                      <button
+                        onClick={async () => {
+                          await msg.undoAction();
+                          setMessages(prev => [
+                            ...prev,
+                            {
+                              id: 'bot-' + Date.now(),
+                              sender: 'bot',
+                              type: 'text',
+                              text: '↩️ **Acción deshecha:** Los cambios han sido revertidos y tus cuentas están como antes.',
+                              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            }
+                          ]);
+                        }}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          background: 'rgba(255,255,255,0.06)',
+                          color: '#e2e8f0',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <RotateCcw size={13} />
+                        Deshacer Acción
                       </button>
                     )}
                   </div>

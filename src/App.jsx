@@ -84,6 +84,7 @@ function AppContent() {
     loading,
     alerts,
     addTransaction,
+    updateTransaction,
     deleteTransaction,
     addDebt, deleteDebt, updateDebt, toggleDebtPaid,
     addSubscription, deleteSubscription, updateSubscription,
@@ -697,6 +698,7 @@ function AppContent() {
           <AssistantChat 
             transactions={transactions}
             onAddTransaction={addTransaction}
+            onUpdateTransaction={updateTransaction}
             onDeleteTransaction={deleteTransaction}
             onEditTransaction={startEditing}
             accountBalances={accountBalances}
