@@ -53,7 +53,19 @@ function AppContent() {
   const now = new Date();
 
   // Navigation State
-  const [activeTab, setActiveTab]     = useState('home');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      const action = params.get('action');
+      if (tab === 'chat' || action === 'chat' || window.location.hash === '#chat') {
+        return 'chat';
+      }
+      const savedDefault = localStorage.getItem('money-flow-default-view');
+      if (savedDefault === 'chat') return 'chat';
+    } catch (e) {}
+    return 'home';
+  });
   const [variosTab, setVariosTab]     = useState('menu');
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,6 +130,15 @@ function AppContent() {
 
   // PWA & Landing Page logic
   const [showLanding, setShowLanding] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'chat' || params.get('action') === 'chat' || window.location.hash === '#chat') {
+        return false;
+      }
+      if (localStorage.getItem('money-flow-default-view') === 'chat') {
+        return false;
+      }
+    } catch (e) {}
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return false;
     return !localStorage.getItem('money-flow-skip-landing');
   });
@@ -140,23 +161,35 @@ function AppContent() {
       const params = new URLSearchParams(window.location.search);
       const action = params.get('action');
       const tab = params.get('tab');
-      if (action === 'chat' || tab === 'chat') {
+      if (action === 'chat' || tab === 'chat' || window.location.hash === '#chat') {
         setShowLanding(false);
         setActiveTab('chat');
-        window.history.replaceState({}, '', window.location.pathname);
       } else if (action === 'voice') {
         setShowLanding(false);
         setIsVoiceModalOpen(true);
-        window.history.replaceState({}, '', window.location.pathname);
       } else if (action === 'expense') {
         setShowLanding(false);
         startEditing({ type: 'expense' });
-        window.history.replaceState({}, '', window.location.pathname);
       }
     } catch (e) {
       console.error('Error handling shortcut action:', e);
     }
   }, []);
+
+  // Synchronize browser URL bar with activeTab so "Add to Home Screen" or bookmarks capture the right tab
+  useEffect(() => {
+    try {
+      if (activeTab === 'chat') {
+        if (!window.location.search.includes('tab=chat')) {
+          window.history.replaceState({ tab: 'chat' }, '', '/?tab=chat');
+        }
+      } else if (activeTab === 'home') {
+        if (window.location.search.includes('tab=')) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
+    } catch (e) {}
+  }, [activeTab]);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();

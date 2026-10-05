@@ -16,7 +16,9 @@ import {
   Smartphone,
   HelpCircle,
   BarChart3,
-  Bot
+  Bot,
+  X,
+  Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { parseFinancialVoiceCommand } from '../utils/aiVoiceParser';
@@ -72,6 +74,25 @@ const AssistantChat = ({
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState('');
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [isDefaultChat, setIsDefaultChat] = useState(() => {
+    try {
+      return localStorage.getItem('money-flow-default-view') === 'chat';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const toggleDefaultChat = (forceVal) => {
+    const nextVal = typeof forceVal === 'boolean' ? forceVal : !isDefaultChat;
+    setIsDefaultChat(nextVal);
+    try {
+      if (nextVal) {
+        localStorage.setItem('money-flow-default-view', 'chat');
+      } else {
+        localStorage.removeItem('money-flow-default-view');
+      }
+    } catch (e) {}
+  };
   
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -226,6 +247,28 @@ const AssistantChat = ({
               message,
               undoAction: async () => {
                 if (onUpdateQuickActions) onUpdateQuickActions(quickActionIds);
+              },
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+        }, 250);
+        return;
+      }
+
+      if (actionResult.action === 'set_default_view') {
+        const { view, message } = actionResult;
+        toggleDefaultChat(view === 'chat');
+        setTimeout(() => {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              sender: 'bot',
+              type: 'action_success_card',
+              title: view === 'chat' ? '🚀 Chat Predeterminado' : '🏠 Inicio Predeterminado',
+              message,
+              undoAction: async () => {
+                toggleDefaultChat(view !== 'chat');
               },
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             }
@@ -1349,6 +1392,177 @@ const AssistantChat = ({
           </button>
         </form>
       </div>
+
+      {/* Modal Guía de Acceso Directo y Apertura Predeterminada en el Celular */}
+      {showInstallGuide && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.78)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#0f172a',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '440px',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
+            padding: '22px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            color: '#fff',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            {/* Header Modal */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'rgba(52, 199, 89, 0.2)',
+                  color: '#34c759',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Smartphone size={20} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Chat directo en tu Celular</h3>
+              </div>
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#94a3b8',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* OPCIÓN 1: ABRIR SIEMPRE DIRECTO AL CHAT (SOLUCIÓN MÁS RECOMENDADA) */}
+            <div style={{
+              background: isDefaultChat ? 'rgba(52, 199, 89, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+              border: `1px solid ${isDefaultChat ? 'rgba(52, 199, 89, 0.4)' : 'rgba(255, 255, 255, 0.08)'}`,
+              borderRadius: '16px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: isDefaultChat ? '#34c759' : '#fff' }}>
+                    ⚡ Abrir siempre directo al Chat
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                    Al tocar el ícono de la app en tu teléfono, abre directo este chat.
+                  </div>
+                </div>
+
+                {/* Switch Toggle */}
+                <button
+                  onClick={() => toggleDefaultChat()}
+                  style={{
+                    width: '54px',
+                    height: '30px',
+                    borderRadius: '15px',
+                    background: isDefaultChat ? '#34c759' : 'rgba(255, 255, 255, 0.2)',
+                    border: 'none',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'background 0.25s',
+                    flexShrink: 0
+                  }}
+                >
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    background: '#fff',
+                    position: 'absolute',
+                    top: '3px',
+                    left: isDefaultChat ? '27px' : '3px',
+                    transition: 'left 0.25s',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {isDefaultChat && <Check size={14} color="#34c759" strokeWidth={3} />}
+                  </div>
+                </button>
+              </div>
+
+              <div style={{ fontSize: '0.74rem', color: isDefaultChat ? '#86efac' : '#cbd5e1', lineHeight: '1.4' }}>
+                {isDefaultChat 
+                  ? '✅ ¡Activado! Cada vez que abras la app en tu celular entrarás de una al Chat. Para ver el inicio normal solo toca la flecha ⬅️.'
+                  : '💡 Si activas esto, no tendrás que navegar por menús: tu app funcionará como un Asistente Personal de Voz directo.'}
+              </div>
+            </div>
+
+            {/* OPCIÓN 2: ATAJO INDEPENDIENTE EN ANDROID */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#c4fb6d' }}>
+                📱 Tener un Ícono Separado del Chat (Android)
+              </div>
+              <ol style={{ margin: 0, paddingLeft: '18px', fontSize: '0.78rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '6px', lineHeight: '1.4' }}>
+                <li>Sal a la pantalla principal de tu celular donde tienes <strong>MoneyFlow</strong>.</li>
+                <li><strong>Mantén presionado el ícono de MoneyFlow</strong> por 2 segundos.</li>
+                <li>Aparecerá un menú emergente: verás <strong>"💬 Chat Asistente IA"</strong>.</li>
+                <li><strong>Mantén presionado ese botón de Chat y arrástralo</strong> a tu pantalla.</li>
+              </ol>
+            </div>
+
+            <button
+              onClick={() => setShowInstallGuide(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #c4fb6d, #34c759)',
+                color: '#090d16',
+                border: 'none',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                marginTop: '4px'
+              }}
+            >
+              ¡Entendido, gracias!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

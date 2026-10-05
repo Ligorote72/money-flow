@@ -271,5 +271,32 @@ export function handleAssistantActionRequest(userText = '', { transactions = [],
     }
   }
 
+  // =========================================================================
+  // CASO F: CONFIGURAR PANTALLA DE INICIO PREDETERMINADA (ABRIR SIEMPRE EN EL CHAT)
+  // Ej: "abre siempre en el chat", "que abra directo en el chat", "deja el chat como inicio"
+  // =========================================================================
+  const isDefaultViewChat = /(?:abre|abrir|entra|entrar|inicia|iniciar|deja|dejar|pon|poner|arranca|arrancar).*(?:siempre|directo|defecto|predeterminad).*(?:chat|asistente)/i.test(lower) ||
+    /(?:chat|asistente).*(?:pantalla de inicio|por defecto|predeterminad)/i.test(lower) ||
+    /abrir siempre en el chat/i.test(lower);
+
+  const isDefaultViewHome = /(?:abre|abrir|inicia|iniciar|pon|poner).*(?:inicio|panel|dashboard|normal|principal)/i.test(lower) && /(?:defecto|predeterminad|siempre)/i.test(lower);
+
+  if (isDefaultViewChat) {
+    return {
+      action: 'set_default_view',
+      view: 'chat',
+      message: '🚀 **¡Listo! Ahora abrirás siempre en el Chat:** Cada vez que toques el ícono de MoneyFlow en tu celular, entrarás **directamente a este Chat del Asistente** sin pasar por menús. Podrás ver el panel principal tocando la flecha ⬅️ en cualquier momento.'
+    };
+  }
+
+  if (isDefaultViewHome) {
+    return {
+      action: 'set_default_view',
+      view: 'home',
+      message: '🏠 **Pantalla Principal Restaurada:** A partir de ahora MoneyFlow abrirá en el panel de inicio habitual (Dashboard de saldos y tarjetas).'
+    };
+  }
+
   return null;
 }
+
