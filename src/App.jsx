@@ -22,6 +22,7 @@ import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Code-splitting con lazy loading para optimización de bundle
+import { motion, AnimatePresence } from 'motion/react';
 const AnalysisBreakdown = lazy(() => import('./components/AnalysisBreakdown'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const BusinessDashboard = lazy(() => import('./components/BusinessDashboard'));
@@ -454,9 +455,9 @@ function AppContent() {
             <p>{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           </div>
           <div className="header-actions">
-            <button onClick={() => setHideBalance(h => !h)} className="glass-btn" title="Ocultar Saldo">{hideBalance ? '👁️' : '🙈'}</button>
-            <button onClick={() => exportToCSV(transactions)} className="glass-btn" title="Exportar CSV">⬇️</button>
-            <button onClick={() => { setActiveTab('varios'); setVariosTab('settings'); }} className="glass-btn" title="Ajustes y PIN">⚙️</button>
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }} onClick={() => setHideBalance(h => !h)} className="glass-btn" title="Ocultar Saldo">{hideBalance ? '👁️' : '🙈'}</motion.button>
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }} onClick={() => exportToCSV(transactions)} className="glass-btn" title="Exportar CSV">⬇️</motion.button>
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }} onClick={() => { setActiveTab('varios'); setVariosTab('settings'); }} className="glass-btn" title="Ajustes y PIN">⚙️</motion.button>
           </div>
         </header>
       )}
@@ -477,37 +478,37 @@ function AppContent() {
             {quickActionIds.map(actId => {
               if (actId === 'income') {
                 return (
-                  <button key="income" className="quick-action-btn" onClick={() => startEditing({ type: 'income' })} title="Registrar Ingreso">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="income" className="quick-action-btn" onClick={() => startEditing({ type: 'income' })} title="Registrar Ingreso">
                     <div className="quick-action-icon" style={{ background: 'rgba(52, 199, 89, 0.16)', color: '#34c759' }}>
                       <ArrowDownLeft size={20} />
                     </div>
                     <span className="quick-action-label">+ Ingreso</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'expense') {
                 return (
-                  <button key="expense" className="quick-action-btn" onClick={() => startEditing({ type: 'expense' })} title="Registrar Gasto">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="expense" className="quick-action-btn" onClick={() => startEditing({ type: 'expense' })} title="Registrar Gasto">
                     <div className="quick-action-icon" style={{ background: 'rgba(255, 59, 48, 0.16)', color: '#ff3b30' }}>
                       <ArrowUpRight size={20} />
                     </div>
                     <span className="quick-action-label">- Gasto</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'transfer') {
                 return (
-                  <button key="transfer" className="quick-action-btn" onClick={() => startEditing({ type: 'transfer' })} title="Transferir entre cuentas">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="transfer" className="quick-action-btn" onClick={() => startEditing({ type: 'transfer' })} title="Transferir entre cuentas">
                     <div className="quick-action-icon" style={{ background: 'rgba(0, 122, 255, 0.16)', color: '#007aff' }}>
                       <ArrowLeftRight size={19} />
                     </div>
                     <span className="quick-action-label">Traspaso</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'voice') {
                 return (
-                  <button key="voice" className="quick-action-btn" onClick={() => setIsVoiceModalOpen(true)} title="Dictar o Registrar con Voz e IA">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="voice" className="quick-action-btn" onClick={() => setIsVoiceModalOpen(true)} title="Dictar o Registrar con Voz e IA">
                     <div className="quick-action-icon" style={{ 
                       background: 'linear-gradient(135deg, rgba(196, 251, 109, 0.25), rgba(0, 122, 255, 0.25))', 
                       color: '#c4fb6d', 
@@ -517,12 +518,12 @@ function AppContent() {
                       <Mic size={20} strokeWidth={2.4} />
                     </div>
                     <span className="quick-action-label" style={{ color: '#c4fb6d', fontWeight: '800' }}>Voz IA</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'chat') {
                 return (
-                  <button key="chat" className="quick-action-btn" onClick={() => setActiveTab('chat')} title="Chat Asistente Financiero IA">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="chat" className="quick-action-btn" onClick={() => setActiveTab('chat')} title="Chat Asistente Financiero IA">
                     <div className="quick-action-icon" style={{ 
                       background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.22), rgba(0, 122, 255, 0.22))', 
                       color: '#34c759', 
@@ -532,57 +533,57 @@ function AppContent() {
                       <Bot size={20} strokeWidth={2.4} />
                     </div>
                     <span className="quick-action-label" style={{ color: '#34c759', fontWeight: '800' }}>Chat IA</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'minegocio') {
                 return (
-                  <button key="minegocio" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('minegocio'); }} title="Cosecha y Finca Cafetera">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="minegocio" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('minegocio'); }} title="Cosecha y Finca Cafetera">
                     <div className="quick-action-icon" style={{ background: 'rgba(196, 251, 109, 0.16)', color: '#c4fb6d' }}>
                       <Coffee size={20} />
                     </div>
                     <span className="quick-action-label">Finca @</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'debts') {
                 return (
-                  <button key="debts" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('debts'); }} title="Deudas y Préstamos">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="debts" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('debts'); }} title="Deudas y Préstamos">
                     <div className="quick-action-icon" style={{ background: 'rgba(52, 199, 89, 0.16)', color: '#34c759', fontSize: '1.2rem' }}>
                       🤝
                     </div>
                     <span className="quick-action-label">Deudas</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'ahorro') {
                 return (
-                  <button key="ahorro" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('ahorro'); }} title="Cochinitos de Ahorro">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="ahorro" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('ahorro'); }} title="Cochinitos de Ahorro">
                     <div className="quick-action-icon" style={{ background: 'rgba(255, 149, 0, 0.16)', color: '#ff9500', fontSize: '1.2rem' }}>
                       🐷
                     </div>
                     <span className="quick-action-label">Ahorro</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'subs') {
                 return (
-                  <button key="subs" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('subs'); }} title="Gastos Fijos">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="subs" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('subs'); }} title="Gastos Fijos">
                     <div className="quick-action-icon" style={{ background: 'rgba(0, 122, 255, 0.16)', color: '#007aff', fontSize: '1.2rem' }}>
                       💳
                     </div>
                     <span className="quick-action-label">Fijos</span>
-                  </button>
+                  </motion.button>
                 );
               }
               if (actId === 'goals') {
                 return (
-                  <button key="goals" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('goals'); }} title="Presupuestos">
+                  <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.92 }} key="goals" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('goals'); }} title="Presupuestos">
                     <div className="quick-action-icon" style={{ background: 'rgba(255, 45, 85, 0.16)', color: '#ff2d55', fontSize: '1.2rem' }}>
                       🎯
                     </div>
                     <span className="quick-action-label">Metas</span>
-                  </button>
+                  </motion.button>
                 );
               }
               return null;
@@ -592,58 +593,71 @@ function AppContent() {
       )}
 
       <main className="app-main">
-        {activeTab === 'home' && (
-          <div className="animate-fade">
-            {upcomingPayments.length > 0 && !searchQuery && (
-              <div className="upcoming-payments">
-                {upcomingPayments.map(p => (
-                  <div key={p.id} className="payment-card">
-                    <p>{p.title}</p>
-                    <strong>{formatCurrency(p.amount)}</strong>
-                    <span>{p.daysLeft === 0 ? '¡Hoy!' : p.daysLeft === 1 ? 'Mañana' : `En ${p.daysLeft} d`}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+        <AnimatePresence mode="wait">
+          {activeTab === 'home' && (
+            <motion.div
+              key="home"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {upcomingPayments.length > 0 && !searchQuery && (
+                <div className="upcoming-payments">
+                  {upcomingPayments.map(p => (
+                    <div key={p.id} className="payment-card">
+                      <p>{p.title}</p>
+                      <strong>{formatCurrency(p.amount)}</strong>
+                      <span>{p.daysLeft === 0 ? '¡Hoy!' : p.daysLeft === 1 ? 'Mañana' : `En ${p.daysLeft} d`}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            {/* Barra de Búsqueda y Filtro de Rango */}
-            <div className="search-bar">
-              <div className="search-input-wrapper">
-                <input 
-                  type="text" 
-                  placeholder="Buscar movimientos (ej: mercado, café...)" 
-                  value={searchQuery} 
-                  onChange={e => setSearchQuery(e.target.value)} 
-                />
-                {searchQuery && (
-                  <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
-                    <X size={14} />
-                  </button>
-                )}
+              {/* Barra de Búsqueda y Filtro de Rango */}
+              <div className="search-bar">
+                <div className="search-input-wrapper">
+                  <input 
+                    type="text" 
+                    placeholder="Buscar movimientos (ej: mercado, café...)" 
+                    value={searchQuery} 
+                    onChange={e => setSearchQuery(e.target.value)} 
+                  />
+                  {searchQuery && (
+                    <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setIsGlobalSearch(!isGlobalSearch)} 
+                  className={`filter-btn ${isGlobalSearch ? 'active' : ''}`}
+                  title={isGlobalSearch ? "Buscando en todo el historial" : "Buscando en el mes actual"}
+                >
+                  {isGlobalSearch ? '🌎 Todo' : '📅 Este Mes'}
+                </button>
               </div>
-              <button 
-                onClick={() => setIsGlobalSearch(!isGlobalSearch)} 
-                className={`filter-btn ${isGlobalSearch ? 'active' : ''}`}
-                title={isGlobalSearch ? "Buscando en todo el historial" : "Buscando en el mes actual"}
-              >
-                {isGlobalSearch ? '🌎 Todo' : '📅 Este Mes'}
-              </button>
-            </div>
-            
-            <TransactionList 
-              transactions={filteredTxs} 
-              onEdit={startEditing} 
-              onDelete={deleteTransaction} 
-              hideBalance={hideBalance} 
-              banks={banks} 
-              searchQuery={searchQuery}
-              onQuickAdd={() => startEditing({ type: 'expense' })}
-            />
-          </div>
-        )}
+              
+              <TransactionList 
+                transactions={filteredTxs} 
+                onEdit={startEditing} 
+                onDelete={deleteTransaction} 
+                hideBalance={hideBalance} 
+                banks={banks} 
+                searchQuery={searchQuery}
+                onQuickAdd={() => startEditing({ type: 'expense' })}
+              />
+            </motion.div>
+          )}
 
         {activeTab === 'analysis' && (
-          <div className="animate-fade">
+          <motion.div
+            key="analysis"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          >
             <WeeklySummary transactions={transactions} />
             <Suspense fallback={<div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.9rem' }}>Cargando análisis y gráficos...</div>}>
               <AnalysisBreakdown 
@@ -655,13 +669,20 @@ function AppContent() {
                 endDate={endDate} 
               />
             </Suspense>
-          </div>
+          </motion.div>
         )}
 
         {activeTab === 'varios' && (
-          <div className="varios-section">
+          <motion.div
+            key="varios"
+            className="varios-section"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          >
             {variosTab === 'menu' ? (
-              <div className="animate-fade">
+              <div>
                 <div style={{ padding: '0 16px 14px' }}>
                   <h2 style={{ fontSize: '1.25rem', fontWeight: '900' }}>🎯 Planificación Financiera</h2>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '2px' }}>
@@ -680,8 +701,10 @@ function AppContent() {
                     { id: 'analysis_nav', label: 'Reportes & Gráficos', desc: 'Salud financiera y métricas', icon: '📈', color: '#007AFF' },
                     { id: 'settings', label: 'Ajustes & Seguridad', desc: 'Temas, PIN y biometría', icon: '⚙️', color: '#8e8e93' },
                   ].map(op => (
-                    <button 
+                    <motion.button 
                       key={op.id} 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => {
                         if (op.id === 'chat_nav') setActiveTab('chat');
                         else if (op.id === 'analysis_nav') setActiveTab('analysis');
@@ -695,12 +718,12 @@ function AppContent() {
                         <span className="label" style={{ display: 'block' }}>{op.label}</span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px', display: 'block' }}>{op.desc}</span>
                       </div>
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="animate-fade">
+              <div>
                 <div className="varios-header">
                   <button onClick={() => setVariosTab('menu')} className="back-btn">←</button>
                   <h2>
@@ -777,30 +800,39 @@ function AppContent() {
                 {variosTab === 'settings' && <SettingsTab onSignOut={handleSignOut} />}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {activeTab === 'chat' && (
-          <AssistantChat 
-            transactions={transactions}
-            onAddTransaction={addTransaction}
-            onUpdateTransaction={updateTransaction}
-            onDeleteTransaction={deleteTransaction}
-            onEditTransaction={startEditing}
-            quickActionIds={quickActionIds}
-            onUpdateQuickActions={setQuickActionIds}
-            accountBalances={accountBalances}
-            banks={banks}
-            onBack={() => setActiveTab('home')}
-            onInstallClick={() => {
-              if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
-              }
-            }}
-            installPromptReady={!!deferredPrompt}
-          />
+          <motion.div
+            key="chat"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <AssistantChat 
+              transactions={transactions}
+              onAddTransaction={addTransaction}
+              onUpdateTransaction={updateTransaction}
+              onDeleteTransaction={deleteTransaction}
+              onEditTransaction={startEditing}
+              quickActionIds={quickActionIds}
+              onUpdateQuickActions={setQuickActionIds}
+              accountBalances={accountBalances}
+              banks={banks}
+              onBack={() => setActiveTab('home')}
+              onInstallClick={() => {
+                if (deferredPrompt) {
+                  deferredPrompt.prompt();
+                  deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+                }
+              }}
+              installPromptReady={!!deferredPrompt}
+            />
+          </motion.div>
         )}
+        </AnimatePresence>
       </main>
 
       {/* Modal Asistente de Voz / IA */}
@@ -839,46 +871,73 @@ function AppContent() {
       <div className={`floating-dock-container ${activeTab === 'add_modal' || editingTransaction || activeTab === 'chat' ? 'dock-hidden' : ''}`}>
         <nav className="floating-dock">
           {/* Tab 1: Inicio */}
-          <button 
+          <motion.button 
+            whileTap={{ scale: 0.88 }}
             onClick={() => setActiveTab('home')} 
             className={`dock-item ${activeTab === 'home' ? 'active' : ''}`}
             title="Inicio"
           >
+            {activeTab === 'home' && (
+              <motion.div 
+                layoutId="activeDockIndicator" 
+                className="dock-active-glow" 
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }} 
+              />
+            )}
             <Home size={22} className="dock-icon" />
             <span className="dock-label">Inicio</span>
-          </button>
+          </motion.button>
 
           {/* Tab 2: Reportes */}
-          <button 
+          <motion.button 
+            whileTap={{ scale: 0.88 }}
             onClick={() => setActiveTab('analysis')} 
             className={`dock-item ${activeTab === 'analysis' ? 'active' : ''}`}
             title="Reportes"
           >
+            {activeTab === 'analysis' && (
+              <motion.div 
+                layoutId="activeDockIndicator" 
+                className="dock-active-glow" 
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }} 
+              />
+            )}
             <PieChart size={22} className="dock-icon" />
             <span className="dock-label">Reportes</span>
-          </button>
+          </motion.button>
 
           {/* Center Elevated Action Button: (+) */}
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.88, rotate: 90 }}
             onClick={() => startEditing({ type: 'expense' })} 
             className="dock-center-fab"
             title="Nuevo Movimiento"
           >
             <Plus size={28} strokeWidth={3} />
-          </button>
+          </motion.button>
 
           {/* Tab 3: Chat IA */}
-          <button 
+          <motion.button 
+            whileTap={{ scale: 0.88 }}
             onClick={() => setActiveTab('chat')} 
             className={`dock-item ${activeTab === 'chat' ? 'active' : ''}`}
             title="Chat Asistente IA"
           >
+            {activeTab === 'chat' && (
+              <motion.div 
+                layoutId="activeDockIndicator" 
+                className="dock-active-glow" 
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }} 
+              />
+            )}
             <Bot size={22} className="dock-icon" />
             <span className="dock-label">Chat IA</span>
-          </button>
+          </motion.button>
 
           {/* Tab 4: Menú / Más */}
-          <button 
+          <motion.button 
+            whileTap={{ scale: 0.88 }}
             onClick={() => {
               setActiveTab('varios');
               setVariosTab('menu');
@@ -886,9 +945,16 @@ function AppContent() {
             className={`dock-item ${activeTab === 'varios' ? 'active' : ''}`}
             title="Menú y Ajustes"
           >
+            {activeTab === 'varios' && (
+              <motion.div 
+                layoutId="activeDockIndicator" 
+                className="dock-active-glow" 
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }} 
+              />
+            )}
             <SlidersHorizontal size={22} className="dock-icon" />
             <span className="dock-label">Más</span>
-          </button>
+          </motion.button>
         </nav>
       </div>
     </div>

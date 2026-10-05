@@ -753,6 +753,7 @@ select option {
 }
 
 .dock-item {
+  position: relative;
   background: none;
   border: none;
   display: flex;
@@ -761,9 +762,20 @@ select option {
   gap: 3px;
   color: rgba(255, 255, 255, 0.45);
   cursor: pointer;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 16px;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1;
+}
+
+.dock-active-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(52, 211, 153, 0.08));
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.28);
+  z-index: -1;
 }
 
 .dock-item:active {
