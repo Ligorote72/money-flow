@@ -677,11 +677,16 @@ function AppContent() {
                     { id: 'subs', label: 'Gastos Fijos', desc: 'Suscripciones y arriendos', icon: '💳', color: '#007AFF' },
                     { id: 'goals', label: 'Presupuestos', desc: 'Límites de gasto del mes', icon: '🎯', color: '#FF2D55' },
                     { id: 'minegocio', label: 'Mi Finca / Negocio', desc: 'Cosecha, báscula y jornales', icon: '☕', color: '#c4fb6d' },
+                    { id: 'analysis_nav', label: 'Reportes & Gráficos', desc: 'Salud financiera y métricas', icon: '📈', color: '#007AFF' },
                     { id: 'settings', label: 'Ajustes & Seguridad', desc: 'Temas, PIN y biometría', icon: '⚙️', color: '#8e8e93' },
                   ].map(op => (
                     <button 
                       key={op.id} 
-                      onClick={() => op.id === 'chat_nav' ? setActiveTab('chat') : setVariosTab(op.id)} 
+                      onClick={() => {
+                        if (op.id === 'chat_nav') setActiveTab('chat');
+                        else if (op.id === 'analysis_nav') setActiveTab('analysis');
+                        else setVariosTab(op.id);
+                      }} 
                       className="menu-item" 
                       style={{ '--item-color': op.color }}
                     >

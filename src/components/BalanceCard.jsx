@@ -80,7 +80,7 @@ const BalanceCard = ({
   const netCashflow = income - expenses;
 
   return (
-    <div style={{ margin: '14px 16px' }} className="animate-fade">
+    <div style={{ margin: '8px 16px 10px' }} className="animate-fade">
       <ShineBorder borderRadius={28} borderWidth={1.5} duration={7} color={['#c4fb6d', '#007AFF', '#34c759']}>
         <div style={{ padding: '22px' }}>
           {/* Top Bar: Label + Account Filter Tabs + User Badge */}

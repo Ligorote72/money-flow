@@ -297,7 +297,7 @@ select option {
 
 .app-main {
   flex: 1;
-  padding-bottom: calc(115px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
 }
 
 .header-actions {
@@ -382,17 +382,24 @@ select option {
   width: fit-content;
 }
 
-/* Quick Actions Bar (1-Toque) */
+/* Quick Actions Bar (1-Toque Sin Huecos Muertos) */
 .quick-actions-bar {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
   gap: 10px;
-  padding: 0 16px;
-  margin-top: 14px;
-  margin-bottom: 18px;
+  padding: 4px 16px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 10px;
+  margin-bottom: 12px;
+}
+
+.quick-actions-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .quick-action-btn {
+  flex: 0 0 76px;
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
@@ -405,6 +412,7 @@ select option {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .quick-action-btn:active {

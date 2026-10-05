@@ -65,7 +65,7 @@ const TransactionList = ({
 
   if (transactions.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-dim)' }} className="animate-fade">
+      <div style={{ textAlign: 'center', padding: '24px 20px 32px', color: 'var(--text-dim)' }} className="animate-fade">
         <div style={{ 
           width: '70px', height: '70px', borderRadius: '50%', 
           background: 'rgba(var(--primary-rgb), 0.1)', 
