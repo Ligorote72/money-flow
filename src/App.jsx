@@ -15,6 +15,7 @@ import Login from './components/Login';
 import PinLockScreen from './components/PinLockScreen';
 import BusinessGate from './components/BusinessGate';
 import VoiceQuickModal from './components/VoiceQuickModal';
+import AssistantChat from './components/AssistantChat';
 import { hasLocalPin } from './utils/crypto';
 import { useFinanceData } from './hooks/useFinanceData';
 import { ToastProvider } from './components/ui/Toast';
@@ -37,7 +38,8 @@ import {
   Search,
   X,
   Sparkles,
-  Mic
+  Mic,
+  Bot
 } from 'lucide-react';
 
 const ACCOUNTS = [
@@ -118,12 +120,17 @@ function AppContent() {
     };
   }, []);
 
-  // Handle Android / PWA App Shortcuts (e.g. /?action=voice, /?action=expense)
+  // Handle Android / PWA App Shortcuts (e.g. /?action=voice, /?action=expense, /?action=chat, /?tab=chat)
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const action = params.get('action');
-      if (action === 'voice') {
+      const tab = params.get('tab');
+      if (action === 'chat' || tab === 'chat') {
+        setShowLanding(false);
+        setActiveTab('chat');
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (action === 'voice') {
         setShowLanding(false);
         setIsVoiceModalOpen(true);
         window.history.replaceState({}, '', window.location.pathname);
@@ -362,48 +369,50 @@ function AppContent() {
   return (
     <div className={`app-container ${hideBalance ? 'hide-balance' : ''}`}>
       {/* Top Header */}
-      <header className="app-header">
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h1>{greetingIcon} {username ? `${greetingText}, ${username}` : 'MoneyFlow'}</h1>
-            {session ? (
-              <span title="Sincronizado con Supabase Cloud" style={{
-                fontSize: '0.68rem',
-                background: 'rgba(52,199,89,0.15)',
-                color: '#34c759',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                fontWeight: '700',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                border: '1px solid rgba(52,199,89,0.3)'
-              }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34c759', display: 'inline-block', boxShadow: '0 0 6px #34c759' }}></span>
-                Cloud
-              </span>
-            ) : (
-              <span title="Modo local" style={{
-                fontSize: '0.68rem',
-                background: 'rgba(255,149,0,0.15)',
-                color: '#ff9500',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                fontWeight: '700',
-                border: '1px solid rgba(255,149,0,0.3)'
-              }}>
-                💾 Local
-              </span>
-            )}
+      {activeTab !== 'chat' && (
+        <header className="app-header">
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1>{greetingIcon} {username ? `${greetingText}, ${username}` : 'MoneyFlow'}</h1>
+              {session ? (
+                <span title="Sincronizado con Supabase Cloud" style={{
+                  fontSize: '0.68rem',
+                  background: 'rgba(52,199,89,0.15)',
+                  color: '#34c759',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: '700',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  border: '1px solid rgba(52,199,89,0.3)'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34c759', display: 'inline-block', boxShadow: '0 0 6px #34c759' }}></span>
+                  Cloud
+                </span>
+              ) : (
+                <span title="Modo local" style={{
+                  fontSize: '0.68rem',
+                  background: 'rgba(255,149,0,0.15)',
+                  color: '#ff9500',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: '700',
+                  border: '1px solid rgba(255,149,0,0.3)'
+                }}>
+                  💾 Local
+                </span>
+              )}
+            </div>
+            <p>{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           </div>
-          <p>{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-        </div>
-        <div className="header-actions">
-          <button onClick={() => setHideBalance(h => !h)} className="glass-btn" title="Ocultar Saldo">{hideBalance ? '👁️' : '🙈'}</button>
-          <button onClick={() => exportToCSV(transactions)} className="glass-btn" title="Exportar CSV">⬇️</button>
-          <button onClick={() => { setActiveTab('varios'); setVariosTab('settings'); }} className="glass-btn" title="Ajustes y PIN">⚙️</button>
-        </div>
-      </header>
+          <div className="header-actions">
+            <button onClick={() => setHideBalance(h => !h)} className="glass-btn" title="Ocultar Saldo">{hideBalance ? '👁️' : '🙈'}</button>
+            <button onClick={() => exportToCSV(transactions)} className="glass-btn" title="Exportar CSV">⬇️</button>
+            <button onClick={() => { setActiveTab('varios'); setVariosTab('settings'); }} className="glass-btn" title="Ajustes y PIN">⚙️</button>
+          </div>
+        </header>
+      )}
 
       {activeTab === 'home' && (
         <>
@@ -465,6 +474,22 @@ function AppContent() {
                 <Mic size={20} strokeWidth={2.4} />
               </div>
               <span className="quick-action-label" style={{ color: '#c4fb6d', fontWeight: '800' }}>Voz IA</span>
+            </button>
+
+            <button 
+              className="quick-action-btn"
+              onClick={() => setActiveTab('chat')}
+              title="Chat Asistente Financiero IA"
+            >
+              <div className="quick-action-icon" style={{ 
+                background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.22), rgba(0, 122, 255, 0.22))', 
+                color: '#34c759', 
+                border: '1px solid rgba(52, 199, 89, 0.35)',
+                boxShadow: '0 0 12px rgba(52, 199, 89, 0.2)'
+              }}>
+                <Bot size={20} strokeWidth={2.4} />
+              </div>
+              <span className="quick-action-label" style={{ color: '#34c759', fontWeight: '800' }}>Chat IA</span>
             </button>
 
             <button 
@@ -564,6 +589,7 @@ function AppContent() {
 
                 <div className="varios-grid">
                   {[
+                    { id: 'chat_nav', label: 'Asistente Chat IA', desc: 'Chatea, dicta y consulta saldos', icon: '🤖', color: '#34C759' },
                     { id: 'debts', label: 'Deudas & Préstamos', desc: 'Lo que debes y te deben', icon: '🤝', color: '#34C759' },
                     { id: 'ahorro', label: 'Cochinitos de Ahorro', desc: 'Metas y alcancías', icon: '🐷', color: '#FF9500' },
                     { id: 'subs', label: 'Gastos Fijos', desc: 'Suscripciones y arriendos', icon: '💳', color: '#007AFF' },
@@ -573,7 +599,7 @@ function AppContent() {
                   ].map(op => (
                     <button 
                       key={op.id} 
-                      onClick={() => setVariosTab(op.id)} 
+                      onClick={() => op.id === 'chat_nav' ? setActiveTab('chat') : setVariosTab(op.id)} 
                       className="menu-item" 
                       style={{ '--item-color': op.color }}
                     >
@@ -666,6 +692,25 @@ function AppContent() {
             )}
           </div>
         )}
+
+        {activeTab === 'chat' && (
+          <AssistantChat 
+            transactions={transactions}
+            onAddTransaction={addTransaction}
+            onDeleteTransaction={deleteTransaction}
+            onEditTransaction={startEditing}
+            accountBalances={accountBalances}
+            banks={banks}
+            onBack={() => setActiveTab('home')}
+            onInstallClick={() => {
+              if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+              }
+            }}
+            installPromptReady={!!deferredPrompt}
+          />
+        )}
       </main>
 
       {/* Modal Asistente de Voz / IA */}
@@ -701,7 +746,7 @@ function AppContent() {
       )}
 
       {/* Modern Floating Island Bottom Nav */}
-      <div className={`floating-dock-container ${activeTab === 'add_modal' || editingTransaction ? 'dock-hidden' : ''}`}>
+      <div className={`floating-dock-container ${activeTab === 'add_modal' || editingTransaction || activeTab === 'chat' ? 'dock-hidden' : ''}`}>
         <nav className="floating-dock">
           {/* Tab 1: Inicio */}
           <button 
@@ -732,7 +777,17 @@ function AppContent() {
             <Plus size={28} strokeWidth={3} />
           </button>
 
-          {/* Tab 3: Menú / Más */}
+          {/* Tab 3: Chat IA */}
+          <button 
+            onClick={() => setActiveTab('chat')} 
+            className={`dock-item ${activeTab === 'chat' ? 'active' : ''}`}
+            title="Chat Asistente IA"
+          >
+            <Bot size={22} className="dock-icon" />
+            <span className="dock-label">Chat IA</span>
+          </button>
+
+          {/* Tab 4: Menú / Más */}
           <button 
             onClick={() => {
               setActiveTab('varios');

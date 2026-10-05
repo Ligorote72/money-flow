@@ -35,6 +35,13 @@ export default defineConfig({
         ],
         shortcuts: [
           {
+            name: 'Chat Asistente IA',
+            short_name: 'Asistente IA',
+            description: 'Chatea y dicta tus finanzas con MoneyFlow IA',
+            url: '/?tab=chat',
+            icons: [{ src: 'icon-512.png', sizes: '512x512', type: 'image/png' }]
+          },
+          {
             name: 'Dictar con IA',
             short_name: 'Voz IA',
             description: 'Registra un movimiento por voz con IA',
