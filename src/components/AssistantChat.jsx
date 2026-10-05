@@ -44,6 +44,8 @@ const AssistantChat = ({
   onUpdateTransaction,
   onDeleteTransaction, 
   onEditTransaction,
+  quickActionIds = [],
+  onUpdateQuickActions,
   accountBalances = { cash: 0, bank: 0 },
   banks = [],
   onBack,
@@ -207,9 +209,31 @@ const AssistantChat = ({
 
     const lower = cleanText.toLowerCase();
 
-    // 0. SOLICITUDES Y ACCIONES OPERATIVAS (Reasignar cuentas, corregir movimientos, traspasos, nivelar saldo)
-    const actionResult = handleAssistantActionRequest(cleanText, { transactions, accountBalances, banks });
+    // 0. SOLICITUDES Y ACCIONES OPERATIVAS (Reasignar cuentas, corregir movimientos, traspasos, nivelar saldo, personalizar accesos rápidos)
+    const actionResult = handleAssistantActionRequest(cleanText, { transactions, accountBalances, banks, quickActionIds });
     if (actionResult) {
+      if (actionResult.action === 'customize_quick_actions') {
+        const { newIds, message } = actionResult;
+        if (onUpdateQuickActions) onUpdateQuickActions(newIds);
+        setTimeout(() => {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              sender: 'bot',
+              type: 'action_success_card',
+              title: '🎨 Accesos Rápidos Personalizados',
+              message,
+              undoAction: async () => {
+                if (onUpdateQuickActions) onUpdateQuickActions(quickActionIds);
+              },
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+        }, 250);
+        return;
+      }
+
       if (actionResult.action === 'reassign_account') {
         const { targetTx, newAccountId, oldAccountId, amount, description } = actionResult;
         if (onUpdateTransaction) {

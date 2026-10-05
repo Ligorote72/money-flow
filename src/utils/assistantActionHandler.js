@@ -9,7 +9,7 @@
 
 import { extractAmount } from './aiVoiceParser';
 
-export function handleAssistantActionRequest(userText = '', { transactions = [], accountBalances = { cash: 0, bank: 0 }, banks = [] }) {
+export function handleAssistantActionRequest(userText = '', { transactions = [], accountBalances = { cash: 0, bank: 0 }, banks = [], quickActionIds = [] }) {
   const lower = userText.toLowerCase().trim();
 
   // 1. Detectar si el mensaje es una SOLICITUD / ACCIÓN
@@ -157,7 +157,7 @@ export function handleAssistantActionRequest(userText = '', { transactions = [],
   // CASO D: ELIMINAR O ANULAR UN MOVIMIENTO
   // Ej: "elimina el último gasto", "borra el movimiento de 500"
   // =========================================================================
-  const isDeleteRequest = /\b(elimina|eliminar|borra|borrar|anula|anular|quita|quitar)\b/i.test(lower);
+  const isDeleteRequest = /\b(elimina|eliminar|borra|borrar|anula|anular)\b/i.test(lower) && !/\b(boton|botones|botón|acceso|accesos)\b/i.test(lower);
 
   if (isDeleteRequest) {
     let targetTx = null;
@@ -174,6 +174,100 @@ export function handleAssistantActionRequest(userText = '', { transactions = [],
         amount: targetTx.amount,
         description: targetTx.description
       };
+    }
+  }
+
+  // =========================================================================
+  // CASO E: PERSONALIZAR BOTONES DE ACCESO RÁPIDO
+  // Ej: "quita el botón de finca", "agrega el botón de deudas", "pon cochinito en accesos rápidos"
+  // =========================================================================
+  const isQuickActionRequest = /\b(acceso|accesos|boton|botones|botón|barra)\b/i.test(lower) || 
+                               /\b(quita|quitar|elimina|eliminar|saca|sacar|borra|agrega|agregar|pon|poner|añade|añadir|restaura|restaurar)\b.*\b(finca|deuda|deudas|cochinito|cochinitos|traspaso|ingreso|gasto|gastos|voz|chat|suscripciones|fijos|metas|presupuesto)\b/i.test(lower);
+
+  if (isQuickActionRequest) {
+    const ACTION_MAP = {
+      finca: 'minegocio',
+      cafe: 'minegocio',
+      cosecha: 'minegocio',
+      deuda: 'debts',
+      deudas: 'debts',
+      prestamo: 'debts',
+      cochinito: 'ahorro',
+      cochinitos: 'ahorro',
+      alcancia: 'ahorro',
+      ahorro: 'ahorro',
+      fijo: 'subs',
+      fijos: 'subs',
+      suscripcion: 'subs',
+      suscripciones: 'subs',
+      meta: 'goals',
+      metas: 'goals',
+      presupuesto: 'goals',
+      traspaso: 'transfer',
+      transferencia: 'transfer',
+      ingreso: 'income',
+      gasto: 'expense',
+      voz: 'voice',
+      chat: 'chat'
+    };
+
+    const ACTION_LABELS = {
+      minegocio: 'Finca @',
+      debts: 'Deudas & Préstamos',
+      ahorro: 'Cochinitos de Ahorro',
+      subs: 'Gastos Fijos',
+      goals: 'Presupuestos',
+      transfer: 'Traspaso',
+      income: '+ Ingreso',
+      expense: '- Gasto',
+      voice: 'Voz IA',
+      chat: 'Chat IA'
+    };
+
+    // Restaurar por defecto
+    if (lower.includes('restaura') || lower.includes('reinicia') || lower.includes('por defecto') || lower.includes('original')) {
+      const defaultIds = ['income', 'expense', 'transfer', 'voice', 'chat', 'minegocio'];
+      return {
+        action: 'customize_quick_actions',
+        newIds: defaultIds,
+        message: '🔄 **Accesos Rápidos Restaurados:** Se han reestablecido los botones originales por defecto (+ Ingreso, - Gasto, Traspaso, Voz IA, Chat IA, Finca @).'
+      };
+    }
+
+    // Identificar qué botón se quiere modificar
+    let matchedKey = null;
+    for (const [kw, id] of Object.entries(ACTION_MAP)) {
+      if (lower.includes(kw)) {
+        matchedKey = id;
+        break;
+      }
+    }
+
+    if (matchedKey) {
+      const isRemove = /\b(quita|quitar|elimina|eliminar|saca|sacar|borra|borrar|no quiero)\b/i.test(lower);
+      const isAdd = /\b(agrega|agregar|pon|poner|añade|añadir|incluye|incluir)\b/i.test(lower);
+      const currentList = quickActionIds && quickActionIds.length > 0 ? [...quickActionIds] : ['income', 'expense', 'transfer', 'voice', 'chat', 'minegocio'];
+      const targetLabel = ACTION_LABELS[matchedKey] || matchedKey;
+
+      if (isRemove) {
+        const filtered = currentList.filter(id => id !== matchedKey);
+        return {
+          action: 'customize_quick_actions',
+          newIds: filtered,
+          message: `🗑️ **Botón Eliminado:** Se ha quitado el botón **"${targetLabel}"** de tu barra de accesos rápidos en el Inicio.`
+        };
+      }
+
+      if (isAdd) {
+        if (!currentList.includes(matchedKey)) {
+          currentList.push(matchedKey);
+        }
+        return {
+          action: 'customize_quick_actions',
+          newIds: currentList,
+          message: `✨ **Botón Agregado:** Se ha añadido el botón **"${targetLabel}"** a tu barra de accesos rápidos en el Inicio.`
+        };
+      }
     }
   }
 

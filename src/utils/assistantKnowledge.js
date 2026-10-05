@@ -29,25 +29,29 @@ export const KNOWLEDGE_TOPICS = [
   // 2. Instalar en pantalla de inicio / PWA / Atajo
   {
     id: 'install_shortcut',
-    keywords: ['instalar', 'pantalla de inicio', 'atajo', 'descargar', 'icono', 'celular', 'app', 'play store', 'como la instalo', 'dejar en el celular', 'dejar en pantalla'],
-    title: '📲 Cómo dejar MoneyFlow y el Chat en tu Pantalla de Inicio',
-    answer: `📲 **Instalar como App en tu Pantalla de Inicio (Sin Play Store ni descargas pesadas):**
+    keywords: ['como hago para dejar el chat', 'dejar el chat', 'dejar chat', 'chat en la pantalla', 'pantalla principal', 'entrar directo al chat', 'acceso directo al chat', 'icono del chat', 'instalar chat', 'como tener el chat en la pantalla', 'instalar', 'pantalla de inicio', 'atajo', 'descargar', 'icono', 'celular', 'app'],
+    title: '📲 Cómo dejar el Chat de IA directamente en tu Pantalla',
+    answer: `📲 **Cómo tener el Chat IA directo en tu pantalla de inicio:**
 
-MoneyFlow es una **PWA (Progressive Web App)** de última generación que se instala directo desde el navegador:
+Para no tener que entrar a la app y luego buscar el chat, puedes dejar un ícono exclusivo en tu teléfono que abre el Chat directamente en 1 toque:
 
-1. **En Android (Chrome):**
-   • Toca el botón verde **"📲 Dejar Chat en Pantalla"** arriba en este chat, O:
-   • Toca los **3 puntos (⋮)** en la esquina superior derecha de Chrome.
-   • Selecciona **"Instalar aplicación"** o **"Agregar a la pantalla principal"**.
-   • ¡Listo! Quedará como un ícono de app nativa con acceso directo.
+👉 **Método 1 (El más rápido y recomendado en Android):**
+1. Ve a la pantalla principal de tu celular donde tienes el ícono de **MoneyFlow**.
+2. **Mantén presionado el ícono de MoneyFlow con el dedo durante 1 segundo.**
+3. Se desplegará un menú rápido con la opción **"Chat Asistente IA"**.
+4. **Mantén presionado "Chat Asistente IA" y arrástralo con el dedo a tu pantalla.**
+5. ¡Listo! Tendrás un ícono independiente que abre directamente este Chat en pantalla completa.
 
-2. **Atajo rápido para entrar directo al Chat:**
-   • Si mantienes presionado el ícono de MoneyFlow en tu pantalla, te saldrá el acceso directo **"Chat Asistente IA"**.
+👉 **Método 2 (Desde Google Chrome):**
+1. Estando dentro de este Chat (en la dirección \`/?tab=chat\`), toca los **3 puntos (⋮)** arriba a la derecha en Chrome.
+2. Selecciona **"Agregar a la pantalla principal"** o **"Instalar aplicación"**.
+3. Escribe de nombre: **"MoneyFlow IA"**.
+4. ¡Listo! Tendrás una aplicación dedicada únicamente al Asistente en tu celular.
 
-3. **En iPhone (Safari):**
-   • Toca el botón **Compartir** (el ícono del cuadrado con flecha hacia arriba ⎋ abajo en Safari).
-   • Baja y selecciona **"Agregar al inicio"** (ícono con signo +).
-   • Toca **"Agregar"** en la esquina superior derecha.`
+🍏 **En iPhone (Safari):**
+1. Toca el botón **Compartir** (⎋ abajo en Safari).
+2. Selecciona **"Agregar al inicio"** (+).
+3. ¡Listo! Se creará el acceso directo en tu iPhone.`
   },
 
   // 3. Finca Cafetera / Negocio

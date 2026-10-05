@@ -61,6 +61,19 @@ function AppContent() {
   const [isBusinessUnlocked, setIsBusinessUnlocked] = useState(false);
   const [isLocked, setIsLocked] = useState(hasLocalPin());
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [quickActionIds, setQuickActionIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('money-flow-quick-actions');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return ['income', 'expense', 'transfer', 'voice', 'chat', 'minegocio'];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('money-flow-quick-actions', JSON.stringify(quickActionIds));
+    } catch (e) {}
+  }, [quickActionIds]);
 
   // Date Filter State
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
@@ -426,86 +439,121 @@ function AppContent() {
             onAdjustSavings={adjustSavingsBalance} onAddBankTransaction={addBankTransaction}
           />
 
-          {/* Quick Action Bar (Acciones Rápidas 1-Toque) */}
+          {/* Quick Action Bar (Acciones Rápidas Configurables 1-Toque) */}
           <div className="quick-actions-bar animate-fade">
-            <button 
-              className="quick-action-btn"
-              onClick={() => startEditing({ type: 'income' })}
-              title="Registrar Ingreso"
-            >
-              <div className="quick-action-icon" style={{ background: 'rgba(52, 199, 89, 0.16)', color: '#34c759' }}>
-                <ArrowDownLeft size={20} />
-              </div>
-              <span className="quick-action-label">+ Ingreso</span>
-            </button>
-
-            <button 
-              className="quick-action-btn"
-              onClick={() => startEditing({ type: 'expense' })}
-              title="Registrar Gasto"
-            >
-              <div className="quick-action-icon" style={{ background: 'rgba(255, 59, 48, 0.16)', color: '#ff3b30' }}>
-                <ArrowUpRight size={20} />
-              </div>
-              <span className="quick-action-label">- Gasto</span>
-            </button>
-
-            <button 
-              className="quick-action-btn"
-              onClick={() => startEditing({ type: 'transfer' })}
-              title="Transferir entre cuentas"
-            >
-              <div className="quick-action-icon" style={{ background: 'rgba(0, 122, 255, 0.16)', color: '#007aff' }}>
-                <ArrowLeftRight size={19} />
-              </div>
-              <span className="quick-action-label">Traspaso</span>
-            </button>
-
-            <button 
-              className="quick-action-btn"
-              onClick={() => setIsVoiceModalOpen(true)}
-              title="Dictar o Registrar con Voz e IA"
-            >
-              <div className="quick-action-icon" style={{ 
-                background: 'linear-gradient(135deg, rgba(196, 251, 109, 0.25), rgba(0, 122, 255, 0.25))', 
-                color: '#c4fb6d', 
-                border: '1px solid rgba(196, 251, 109, 0.4)',
-                boxShadow: '0 0 12px rgba(196, 251, 109, 0.2)'
-              }}>
-                <Mic size={20} strokeWidth={2.4} />
-              </div>
-              <span className="quick-action-label" style={{ color: '#c4fb6d', fontWeight: '800' }}>Voz IA</span>
-            </button>
-
-            <button 
-              className="quick-action-btn"
-              onClick={() => setActiveTab('chat')}
-              title="Chat Asistente Financiero IA"
-            >
-              <div className="quick-action-icon" style={{ 
-                background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.22), rgba(0, 122, 255, 0.22))', 
-                color: '#34c759', 
-                border: '1px solid rgba(52, 199, 89, 0.35)',
-                boxShadow: '0 0 12px rgba(52, 199, 89, 0.2)'
-              }}>
-                <Bot size={20} strokeWidth={2.4} />
-              </div>
-              <span className="quick-action-label" style={{ color: '#34c759', fontWeight: '800' }}>Chat IA</span>
-            </button>
-
-            <button 
-              className="quick-action-btn"
-              onClick={() => {
-                setActiveTab('varios');
-                setVariosTab('minegocio');
-              }}
-              title="Cosecha y Finca Cafetera"
-            >
-              <div className="quick-action-icon" style={{ background: 'rgba(196, 251, 109, 0.16)', color: '#c4fb6d' }}>
-                <Coffee size={20} />
-              </div>
-              <span className="quick-action-label">Finca @</span>
-            </button>
+            {quickActionIds.map(actId => {
+              if (actId === 'income') {
+                return (
+                  <button key="income" className="quick-action-btn" onClick={() => startEditing({ type: 'income' })} title="Registrar Ingreso">
+                    <div className="quick-action-icon" style={{ background: 'rgba(52, 199, 89, 0.16)', color: '#34c759' }}>
+                      <ArrowDownLeft size={20} />
+                    </div>
+                    <span className="quick-action-label">+ Ingreso</span>
+                  </button>
+                );
+              }
+              if (actId === 'expense') {
+                return (
+                  <button key="expense" className="quick-action-btn" onClick={() => startEditing({ type: 'expense' })} title="Registrar Gasto">
+                    <div className="quick-action-icon" style={{ background: 'rgba(255, 59, 48, 0.16)', color: '#ff3b30' }}>
+                      <ArrowUpRight size={20} />
+                    </div>
+                    <span className="quick-action-label">- Gasto</span>
+                  </button>
+                );
+              }
+              if (actId === 'transfer') {
+                return (
+                  <button key="transfer" className="quick-action-btn" onClick={() => startEditing({ type: 'transfer' })} title="Transferir entre cuentas">
+                    <div className="quick-action-icon" style={{ background: 'rgba(0, 122, 255, 0.16)', color: '#007aff' }}>
+                      <ArrowLeftRight size={19} />
+                    </div>
+                    <span className="quick-action-label">Traspaso</span>
+                  </button>
+                );
+              }
+              if (actId === 'voice') {
+                return (
+                  <button key="voice" className="quick-action-btn" onClick={() => setIsVoiceModalOpen(true)} title="Dictar o Registrar con Voz e IA">
+                    <div className="quick-action-icon" style={{ 
+                      background: 'linear-gradient(135deg, rgba(196, 251, 109, 0.25), rgba(0, 122, 255, 0.25))', 
+                      color: '#c4fb6d', 
+                      border: '1px solid rgba(196, 251, 109, 0.4)',
+                      boxShadow: '0 0 12px rgba(196, 251, 109, 0.2)'
+                    }}>
+                      <Mic size={20} strokeWidth={2.4} />
+                    </div>
+                    <span className="quick-action-label" style={{ color: '#c4fb6d', fontWeight: '800' }}>Voz IA</span>
+                  </button>
+                );
+              }
+              if (actId === 'chat') {
+                return (
+                  <button key="chat" className="quick-action-btn" onClick={() => setActiveTab('chat')} title="Chat Asistente Financiero IA">
+                    <div className="quick-action-icon" style={{ 
+                      background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.22), rgba(0, 122, 255, 0.22))', 
+                      color: '#34c759', 
+                      border: '1px solid rgba(52, 199, 89, 0.35)',
+                      boxShadow: '0 0 12px rgba(52, 199, 89, 0.2)'
+                    }}>
+                      <Bot size={20} strokeWidth={2.4} />
+                    </div>
+                    <span className="quick-action-label" style={{ color: '#34c759', fontWeight: '800' }}>Chat IA</span>
+                  </button>
+                );
+              }
+              if (actId === 'minegocio') {
+                return (
+                  <button key="minegocio" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('minegocio'); }} title="Cosecha y Finca Cafetera">
+                    <div className="quick-action-icon" style={{ background: 'rgba(196, 251, 109, 0.16)', color: '#c4fb6d' }}>
+                      <Coffee size={20} />
+                    </div>
+                    <span className="quick-action-label">Finca @</span>
+                  </button>
+                );
+              }
+              if (actId === 'debts') {
+                return (
+                  <button key="debts" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('debts'); }} title="Deudas y Préstamos">
+                    <div className="quick-action-icon" style={{ background: 'rgba(52, 199, 89, 0.16)', color: '#34c759', fontSize: '1.2rem' }}>
+                      🤝
+                    </div>
+                    <span className="quick-action-label">Deudas</span>
+                  </button>
+                );
+              }
+              if (actId === 'ahorro') {
+                return (
+                  <button key="ahorro" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('ahorro'); }} title="Cochinitos de Ahorro">
+                    <div className="quick-action-icon" style={{ background: 'rgba(255, 149, 0, 0.16)', color: '#ff9500', fontSize: '1.2rem' }}>
+                      🐷
+                    </div>
+                    <span className="quick-action-label">Ahorro</span>
+                  </button>
+                );
+              }
+              if (actId === 'subs') {
+                return (
+                  <button key="subs" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('subs'); }} title="Gastos Fijos">
+                    <div className="quick-action-icon" style={{ background: 'rgba(0, 122, 255, 0.16)', color: '#007aff', fontSize: '1.2rem' }}>
+                      💳
+                    </div>
+                    <span className="quick-action-label">Fijos</span>
+                  </button>
+                );
+              }
+              if (actId === 'goals') {
+                return (
+                  <button key="goals" className="quick-action-btn" onClick={() => { setActiveTab('varios'); setVariosTab('goals'); }} title="Presupuestos">
+                    <div className="quick-action-icon" style={{ background: 'rgba(255, 45, 85, 0.16)', color: '#ff2d55', fontSize: '1.2rem' }}>
+                      🎯
+                    </div>
+                    <span className="quick-action-label">Metas</span>
+                  </button>
+                );
+              }
+              return null;
+            })}
           </div>
         </>
       )}
@@ -701,6 +749,8 @@ function AppContent() {
             onUpdateTransaction={updateTransaction}
             onDeleteTransaction={deleteTransaction}
             onEditTransaction={startEditing}
+            quickActionIds={quickActionIds}
+            onUpdateQuickActions={setQuickActionIds}
             accountBalances={accountBalances}
             banks={banks}
             onBack={() => setActiveTab('home')}
